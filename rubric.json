@@ -1,0 +1,17 @@
+{
+  "critical_gates": {
+    "exact_count": 3,
+    "must_be_red": true,
+    "max_price": 50
+  },
+  "weights": {
+    "tasting_clarity": 0.3,
+    "popularity_alignment": 0.3,
+    "regional_diversity": 0.2,
+    "language_tone": 0.2
+  },
+  "thresholds": {
+    "pass": 3.5,
+    "warn": 3.0
+  }
+}

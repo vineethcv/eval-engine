@@ -1,0 +1,2 @@
+# Mock-only mode requires no external deps.
+# (Add openai later when you turn on real mode.)

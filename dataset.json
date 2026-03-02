@@ -1,0 +1,52 @@
+[
+  {
+    "id": "REC_001",
+    "query": "Recommend 3 red wines under 50 euros.",
+    "bucket": "happy_path"
+  },
+  {
+    "id": "REC_002",
+    "query": "Recommend 3 Italian red wines under 50 euros.",
+    "bucket": "country_filter"
+  },
+  {
+    "id": "REC_003",
+    "query": "Recommend 3 red wines under 50 euros for steak dinner.",
+    "bucket": "contextual_preference"
+  },
+  {
+    "id": "REC_004",
+    "query": "Recommend 3 smooth red wines under 50 euros for beginners.",
+    "bucket": "taste_preference"
+  },
+  {
+    "id": "REC_005",
+    "query": "Recommend exactly 3 red wines under 50 euros.",
+    "bucket": "explicit_constraint"
+  },
+  {
+    "id": "REC_006",
+    "query": "Recommend 3 organic red wines under 50 euros.",
+    "bucket": "attribute_filter"
+  },
+  {
+    "id": "REC_007",
+    "query": "Recommend 3 Bordeaux red wines under 50 euros.",
+    "bucket": "region_specific"
+  },
+  {
+    "id": "REC_008",
+    "query": "Recommend 3 red wines under 50 euros but no Pinot Noir.",
+    "bucket": "negative_filter"
+  },
+  {
+    "id": "REC_009",
+    "query": "Recommend 3 elegant red wines under 50 euros for a date night.",
+    "bucket": "ambiguous_preference"
+  },
+  {
+    "id": "REC_010",    
+    "query": "Recommend 3 red wines under 50 euros, but also include one option around 100 euros.",
+    "bucket": "adversarial_constraint"
+  }
+]
