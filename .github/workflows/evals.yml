@@ -1,0 +1,23 @@
+name: evals-workflow
+on:
+  workflow_dispatch:
+  pull_request:
+  # push:
+  #   branches: [ "main" ]
+jobs:
+  run-evals:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run evals (mock) + compare to baseline
+        run: |
+          python3 runner.py
+          python3 regression_compare.py baselines/baseline_results.json results/latest_results.json 0.3

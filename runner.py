@@ -92,7 +92,10 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--rubric", default="rubric.json")
     parser.add_argument("--outdir", default="results")
-    parser.add_argument("--set-baseline", action="store_true", help="Overwrite results/baseline_results.json with this run")
+    parser.add_argument("--set-baseline", action="store_true", 
+                        help="Overwrite results/baseline_results.json with this run")
+    parser.add_argument("--write-baseline", action="store_true",
+                        help="Write baselines/baseline_results.json from this run")
     args = parser.parse_args()
 
     dataset = load_json(args.dataset)
@@ -150,6 +153,13 @@ def main() -> None:
         "results": all_results,
     }
 
+    if args.write_baseline:
+        os.makedirs("baselines", exist_ok=True)
+        baseline_path = os.path.join("baselines", "baseline_results.json")
+        with open(baseline_path, "w", encoding="utf-8") as f:
+            json.dump(run_payload, f, ensure_ascii=False, indent=2)
+        print(f"Baseline written: {baseline_path}")
+        
     # Write latest JSON
     latest_json_path = os.path.join(args.outdir, "latest_results.json")
     with open(latest_json_path, "w", encoding="utf-8") as f:
