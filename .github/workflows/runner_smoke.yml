@@ -1,0 +1,16 @@
+name: runner-smoke
+
+on:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: [self-hosted, mac-mini]
+    steps:
+      - name: System info
+        run: |
+          uname -a
+          whoami
+          pwd
+      - name: Docker is reachable
+        run: docker ps
