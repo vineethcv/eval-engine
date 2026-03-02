@@ -86,7 +86,7 @@ def mock_llm_respond(query: str) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", choices=["mock", "openai"], default="mock")
-    parser.add_argument("--model", default="gpt-4.1-mini")  # you can change later
+    parser.add_argument("--model", default="gpt-4o-mini")  # you can change later
     parser.add_argument("--temperature", type=float, default=0.2)
     parser.add_argument("--dataset", default="dataset.json")
     parser.add_argument("--limit", type=int, default=None)
@@ -159,7 +159,7 @@ def main() -> None:
         with open(baseline_path, "w", encoding="utf-8") as f:
             json.dump(run_payload, f, ensure_ascii=False, indent=2)
         print(f"Baseline written: {baseline_path}")
-        
+
     # Write latest JSON
     latest_json_path = os.path.join(args.outdir, "latest_results.json")
     with open(latest_json_path, "w", encoding="utf-8") as f:
