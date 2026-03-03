@@ -9,8 +9,10 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List
 from confidence import compute_confidence
 from llm_client import respond_openai
+from llm_client import respond_openai, PROMPT_VERSION
 
 from scorer import evaluate_case, evalresult_to_flat_dict
+RUBRIC_VERSION = "v1.0"
 
 
 def load_json(path: str) -> Any:
@@ -143,6 +145,8 @@ def main() -> None:
             "mode": args.mode,
             "model": args.model if args.mode != "mock" else "mock",
             "temperature": args.temperature if args.mode != "mock" else None,
+            "prompt_version": PROMPT_VERSION if args.mode != "mock" else None,
+            "rubric_version": RUBRIC_VERSION
         },
         "summary": {
             "total": len(flat_rows),

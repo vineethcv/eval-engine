@@ -8,6 +8,7 @@ from typing import Optional
 class LLMClientError(RuntimeError):
     pass
 
+PROMPT_VERSION = "v2.0-3item-notes-region"
 
 def respond_openai(query: str, model: str, temperature: float) -> str:
     """
