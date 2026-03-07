@@ -10,6 +10,7 @@ from typing import Any, Dict, List
 from confidence import compute_confidence
 from llm_client import respond_openai
 from llm_client import respond_openai, PROMPT_VERSION
+from judge_client import JUDGE_PROMPT_VERSION
 
 from scorer import evaluate_case, evalresult_to_flat_dict
 RUBRIC_VERSION = "v1.0"
@@ -110,11 +111,21 @@ def main() -> None:
     dataset_iter = dataset[:args.limit] if args.limit else dataset
     for case in dataset_iter:
         query = str(case.get("query", ""))
+        if case["id"] == "REC_001":
+            response = "1. Red Wine - €10\n2. Another Red Wine - €12\n3. Cheap Red Wine - €8"
         if args.mode == "mock":
             response = mock_llm_respond(query)
         else:
             response = respond_openai(query, model=args.model, temperature=args.temperature)
         er = evaluate_case(case, response, rubric)
+        from judge_client import judge_response
+        judge_scores = judge_response(query, response, rubric)
+        judge_weighted = (
+            judge_scores["tasting_clarity"] * rubric["weights"]["tasting_clarity"] +
+            judge_scores["popularity_alignment"] * rubric["weights"]["popularity_alignment"] +
+            judge_scores["regional_diversity"] * rubric["weights"]["regional_diversity"] +
+            judge_scores["language_tone"] * rubric["weights"]["language_tone"]
+        )
         dim_scores = {
             "tasting_clarity": er.dimension_scores.tasting_clarity,
             "popularity_alignment": er.dimension_scores.popularity_alignment,
@@ -134,8 +145,14 @@ def main() -> None:
             "verdict": er.verdict,
             "eval_confidence": conf,
             "notes": er.notes,
+            "judge_scores": judge_scores,
+            "judge_weighted_score": round(judge_weighted, 2)
         })
         flat = evalresult_to_flat_dict(er)
+        flat["judge_tasting_clarity"] = judge_scores["tasting_clarity"]
+        flat["judge_popularity_alignment"] = judge_scores["popularity_alignment"]
+        flat["judge_regional_diversity"] = judge_scores["regional_diversity"]
+        flat["judge_language_tone"] = judge_scores["language_tone"]
         flat["eval_confidence"] = conf
         flat_rows.append(flat)
 
@@ -146,7 +163,9 @@ def main() -> None:
             "model": args.model if args.mode != "mock" else "mock",
             "temperature": args.temperature if args.mode != "mock" else None,
             "prompt_version": PROMPT_VERSION if args.mode != "mock" else None,
-            "rubric_version": RUBRIC_VERSION
+            "rubric_version": RUBRIC_VERSION,
+            "judge_model": "gpt-4o-mini",
+            "judge_prompt_version": JUDGE_PROMPT_VERSION
         },
         "summary": {
             "total": len(flat_rows),
