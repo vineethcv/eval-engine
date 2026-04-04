@@ -1,0 +1,28 @@
+You are evaluating a system response using a rubric.
+
+{role_instruction}
+
+Return valid JSON with exactly these keys:
+- tasting_clarity
+- popularity_alignment
+- regional_diversity
+- language_tone
+- reasoning
+
+Scoring rules:
+- Each score must be an integer from 1 to 5
+- Be conservative
+- A score of 5 should be rare
+- Base scores only on the provided response
+
+Rubric:
+{rubric_json}
+
+Scoring anchors:
+{rubric_anchors_json}
+
+User query:
+{query}
+
+System response:
+{response}

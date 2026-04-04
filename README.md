@@ -71,6 +71,7 @@ This makes the framework reusable for:
 	•	agent workflow evaluation
 	•	retrieval or RAG response evaluation
 	•	other structured AI output evaluation tasks
+
 For extension guidance, see: `docs/boilerplate_extension_guide.md`
 ⸻
 
@@ -111,6 +112,15 @@ Wine is the example task, not the long-term framework identity.
 ├── system_client.py
 ├── judge_client.py
 ├── regression_compare.py
+│
+├── prompts/
+│   ├── system/
+│   │   └── wine_generator.txt
+│   └── judges/
+│       ├── base_prompt.txt
+│       ├── role_balanced.txt
+│       ├── role_strict.txt
+│       └── role_usefulness.txt
 │
 ├── baselines/
 ├── results/
@@ -307,6 +317,7 @@ This remains the reference task because it demonstrates:
 - regression comparison
 
 Wine is the example task, not the long-term framework identity.
+
 See also: `docs/examples/wine_recommendation.md`
 ---
 
