@@ -13,3 +13,9 @@ mock_response_profile:
   adversarial_triggers:
     - "100"
     - "premium"
+
+evaluation:
+  rubric:
+    source: task_local
+  thresholds:
+    source: rubric

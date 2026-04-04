@@ -36,6 +36,25 @@ def ensure_dir(path: str) -> None:
 def load_yaml(path: str) -> Any:
     with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
+    
+def get_task_rubric(task_config: Dict[str, Any]) -> Dict[str, Any]:
+    evaluation_cfg = task_config.get("evaluation", {})
+    rubric_cfg = evaluation_cfg.get("rubric", {})
+
+    if rubric_cfg.get("source") != "task_local":
+        raise ValueError("Unsupported rubric source in task config.")
+
+    rubric_path = task_config["rubric_path"]
+    return load_json(rubric_path)
+
+def get_task_thresholds(task_config: Dict[str, Any], rubric: Dict[str, Any]) -> Dict[str, Any]:
+    evaluation_cfg = task_config.get("evaluation", {})
+    thresholds_cfg = evaluation_cfg.get("thresholds", {})
+
+    if thresholds_cfg.get("source") != "rubric":
+        raise ValueError("Unsupported thresholds source in task config.")
+
+    return rubric["thresholds"]
 
 def write_json(path: str, data: Any) -> None:
     with open(path, "w", encoding="utf-8") as f:
@@ -202,7 +221,8 @@ def main():
     system_config = load_yaml(system_config_path)
     judge_config = load_yaml(judge_config_path)
     dataset = load_json(task_config["dataset_path"])
-    rubric = load_json(task_config["rubric_path"])
+    rubric = get_task_rubric(task_config)
+    thresholds = get_task_thresholds(task_config, rubric)
 
     if args.limit:
         dataset = dataset[: args.limit]
