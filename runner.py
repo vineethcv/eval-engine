@@ -1,4 +1,5 @@
 from __future__ import annotations
+from email import parser
 from dotenv import load_dotenv
 import yaml
 
@@ -147,6 +148,19 @@ def main():
         default="configs/tasks/wine.yaml",
         help="Path to task configuration file",
     )
+    parser.add_argument(
+        "--system-config",
+        type=str,
+        default=None,
+        help="Optional override path to system configuration file",
+    )
+
+    parser.add_argument(
+        "--judge-config",
+        type=str,
+        default=None,
+        help="Optional override path to judge configuration file",
+    )
     parser.add_argument("--dataset", default="dataset.json")
     parser.add_argument("--rubric", default="rubric.json")
 
@@ -156,8 +170,8 @@ def main():
         default="mock",
     )
 
-    parser.add_argument("--model", default="gpt-4o-mini")
-    parser.add_argument("--temperature", type=float, default=0.0)
+    parser.add_argument("--model", type=str, default=None)
+    parser.add_argument("--temperature", type=float, default=None)
     parser.add_argument(
         "--enable-judge",
         action="store_true",
@@ -175,6 +189,11 @@ def main():
     args = parser.parse_args()
 
     task_config = load_yaml(args.task_config)
+    system_config_path = args.system_config or task_config["system_config"]
+    judge_config_path = args.judge_config or task_config["judge_config"]
+
+    system_config = load_yaml(system_config_path)
+    judge_config = load_yaml(judge_config_path)
     dataset = load_json(task_config["dataset_path"])
     rubric = load_json(task_config["rubric_path"])
 
@@ -195,10 +214,16 @@ def main():
         if args.mode == "mock":
             response = mock_llm_respond(query)
         else:
+            effective_model = args.model or system_config["model"]
+            effective_temperature = args.temperature
+
+            if effective_temperature is None:
+                effective_temperature = system_config.get("temperature", 0.0)
+
             response = generate_openai_response(
                 query=query,
-                model=args.model,
-                temperature=args.temperature,
+                model=effective_model,
+                temperature=effective_temperature,
             )
 
         # Heuristic scoring

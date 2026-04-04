@@ -1,0 +1,5 @@
+name: openai_wine_demo
+
+provider: openai
+model: gpt-4o-mini
+temperature: 0.0

@@ -1,0 +1,10 @@
+name: default_judge_ensemble
+
+enabled: false
+model: gpt-4o-mini
+temperature: 0.0
+
+roles:
+  - balanced
+  - strict
+  - usefulness
