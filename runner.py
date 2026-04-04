@@ -60,6 +60,46 @@ def build_run_metadata(args: argparse.Namespace) -> Dict[str, Any]:
     }
 
 
+def compute_judge_summary(
+    judge_bundle: Dict[str, Any],
+    rubric: Dict[str, Any],
+    heuristic_weighted_score: float,
+) -> Dict[str, Any]:
+    judge_scores = judge_bundle["ensemble_mean_scores"]
+    judge_stddev = judge_bundle["ensemble_stddev_scores"]
+    judge_individual = judge_bundle["individual_judges"]
+
+    weights = rubric.get("weights", {})
+
+    judge_weighted_score = round(
+        sum(judge_scores[k] * weights.get(k, 0) for k in judge_scores),
+        2,
+    )
+
+    judge_delta = round(
+        judge_weighted_score - heuristic_weighted_score,
+        2,
+    )
+
+    max_stddev = max(judge_stddev.values()) if judge_stddev else 0.0
+
+    if max_stddev < 0.5:
+        agreement = "high"
+    elif max_stddev < 0.8:
+        agreement = "medium"
+    else:
+        agreement = "low"
+
+    return {
+        "judge_scores": judge_scores,
+        "judge_weighted_score": judge_weighted_score,
+        "judge_stddev": judge_stddev,
+        "judge_individual": judge_individual,
+        "judge_delta": judge_delta,
+        "judge_agreement_level": agreement,
+    }
+
+
 # ----------------------------
 # Mock model
 # ----------------------------
@@ -67,7 +107,6 @@ def build_run_metadata(args: argparse.Namespace) -> Dict[str, Any]:
 def mock_llm_respond(query: str) -> str:
     q = query.lower()
 
-    # Adversarial asks for €100 option
     if "100" in q or "premium" in q:
         return """1. Château Margaux — Bordeaux, France — €120
 Elegant and complex with cassis, cedar, and fine tannins.
@@ -138,9 +177,7 @@ def main():
     for case in dataset:
         query = case["query"]
 
-        # ----------------------------
         # Model response
-        # ----------------------------
         if args.mode == "mock":
             response = mock_llm_respond(query)
         else:
@@ -150,15 +187,11 @@ def main():
                 temperature=args.temperature,
             )
 
-        # ----------------------------
         # Heuristic scoring
-        # ----------------------------
         eval_result = evaluate_case(query, response, rubric)
         flat_eval = evalresult_to_flat_dict(eval_result)
 
-        # ----------------------------
-        # Judge evaluation (optional)
-        # ----------------------------
+        # Judge evaluation
         judge_enabled = args.mode == "openai" and args.enable_judge
 
         if judge_enabled:
@@ -169,62 +202,36 @@ def main():
                 model=args.model,
             )
 
-            judge_scores = judge_bundle["ensemble_mean_scores"]
-            judge_stddev = judge_bundle["ensemble_stddev_scores"]
-            judge_individual = judge_bundle["individual_judges"]
-
-            weights = rubric.get("weights", {})
-            judge_weighted_score = round(
-                sum(judge_scores[k] * weights.get(k, 0) for k in judge_scores),
-                2,
+            judge_summary = compute_judge_summary(
+                judge_bundle,
+                rubric,
+                flat_eval["weighted_score"],
             )
-
-            judge_delta = round(
-                judge_weighted_score - flat_eval["weighted_score"], 2
-            )
-
-            max_stddev = max(judge_stddev.values()) if judge_stddev else 0.0
-            if max_stddev < 0.5:
-                agreement = "high"
-            elif max_stddev < 0.8:
-                agreement = "medium"
-            else:
-                agreement = "low"
         else:
-            judge_scores = None
-            judge_weighted_score = None
-            judge_stddev = None
-            judge_individual = []
-            judge_delta = None
-            agreement = None
+            judge_summary = {
+                "judge_scores": None,
+                "judge_weighted_score": None,
+                "judge_stddev": None,
+                "judge_individual": [],
+                "judge_delta": None,
+                "judge_agreement_level": None,
+            }
 
-        # ----------------------------
         # Confidence
-        # ----------------------------
         confidence = compute_confidence(eval_result)
 
-        # ----------------------------
-        # Final result
-        # ----------------------------
         result = {
             "id": case["id"],
             "query": query,
             "response": response,
             **flat_eval,
-            "judge_scores": judge_scores,
-            "judge_weighted_score": judge_weighted_score,
-            "judge_stddev": judge_stddev,
-            "judge_individual": judge_individual,
-            "judge_delta": judge_delta,
-            "judge_agreement_level": agreement,
+            **judge_summary,
             "confidence": confidence,
         }
 
         results.append(result)
 
-    # ----------------------------
     # Write outputs
-    # ----------------------------
     latest_path = "results/latest_results.json"
     write_json(latest_path, {"metadata": run_metadata, "results": results})
 
@@ -232,18 +239,15 @@ def main():
     run_path = f"results/run_{timestamp}.json"
     write_json(run_path, {"metadata": run_metadata, "results": results})
 
-    flat_rows = [r for r in results]
     csv_path = "results/report.csv"
-    write_csv(csv_path, flat_rows)
+    write_csv(csv_path, results)
 
     print(f"\nSaved results:")
     print(f" - {latest_path}")
     print(f" - {run_path}")
     print(f" - {csv_path}")
 
-    # ----------------------------
-    # Baseline write
-    # ----------------------------
+    # Baseline
     if args.write_baseline:
         baseline_path = "baselines/baseline_results.json"
         write_json(
