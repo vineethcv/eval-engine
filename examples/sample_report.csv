@@ -1,0 +1,2 @@
+id,query,response,gate_pass,gate_reasons,tasting_clarity,popularity_alignment,regional_diversity,language_tone,weighted_score,verdict,item_count,price_count,region_count,judge_scores,judge_weighted_score,judge_stddev,judge_individual,judge_delta,judge_agreement_level,confidence
+REC_001,"Recommend 3 red wines under 50 euros.","1. Bordeaux Blend — Bordeaux, France — €40 ...",true,"",4,4,5,4,4.2,PASS,3,3,3,"{...}",4.17,"{...}","[]",-0.03,medium,0.8

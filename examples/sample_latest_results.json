@@ -1,0 +1,49 @@
+{
+  "metadata": {
+    "timestamp_utc": "2026-04-04T10:00:00Z",
+    "mode": "openai",
+    "model": "gpt-4o-mini",
+    "temperature": 0.2,
+    "prompt_version": "v1.0-wine-recommendation",
+    "judge_enabled": true,
+    "judge_runs": 3,
+    "judge_prompt_version": "v2.0-ensemble-variants",
+    "rubric_version": "v1.0",
+    "dataset_version": "v1.0"
+  },
+  "results": [
+    {
+      "id": "REC_001",
+      "query": "Recommend 3 red wines under 50 euros.",
+      "response": "1. Bordeaux Blend — Bordeaux, France — €40\nRich blackcurrant, oak, and spice.\n\n2. Chianti Classico — Tuscany, Italy — €25\nCherry, herbs, and bright acidity.\n\n3. Rioja Crianza — Rioja, Spain — €20\nVanilla, red fruit, and soft tannins.",
+      "gate_pass": true,
+      "gate_reasons": "",
+      "tasting_clarity": 4,
+      "popularity_alignment": 4,
+      "regional_diversity": 5,
+      "language_tone": 4,
+      "weighted_score": 4.2,
+      "verdict": "PASS",
+      "item_count": 3,
+      "price_count": 3,
+      "region_count": 3,
+      "judge_scores": {
+        "tasting_clarity": 4,
+        "popularity_alignment": 5,
+        "regional_diversity": 3,
+        "language_tone": 4.33
+      },
+      "judge_weighted_score": 4.17,
+      "judge_stddev": {
+        "tasting_clarity": 0.816,
+        "popularity_alignment": 0.0,
+        "regional_diversity": 0.0,
+        "language_tone": 0.471
+      },
+      "judge_individual": [],
+      "judge_delta": -0.03,
+      "judge_agreement_level": "medium",
+      "confidence": 0.8
+    }
+  ]
+}   
