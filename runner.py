@@ -90,6 +90,7 @@ def build_result_record(
         "id": case["id"],
         "query": case["query"],
         "bucket": case.get("bucket"),
+        "scenario": case.get("scenario"),
         "response": response,
         "confidence": confidence,
         "generator": {
