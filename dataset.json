@@ -2,51 +2,61 @@
   {
     "id": "REC_001",
     "query": "Recommend 3 red wines under 50 euros.",
-    "bucket": "happy_path"
+    "bucket": "happy_path",
+    "scenario": "happy_path"
   },
   {
     "id": "REC_002",
     "query": "Recommend 3 Italian red wines under 50 euros.",
-    "bucket": "country_filter"
+    "bucket": "country_filter",
+    "scenario": "filter_country"
   },
   {
     "id": "REC_003",
     "query": "Recommend 3 red wines under 50 euros for steak dinner.",
-    "bucket": "contextual_preference"
+    "bucket": "contextual_preference",
+    "scenario": "contextual_preference"
   },
   {
     "id": "REC_004",
     "query": "Recommend 3 smooth red wines under 50 euros for beginners.",
-    "bucket": "taste_preference"
+    "bucket": "taste_preference",
+    "scenario": "taste_preference"
   },
   {
     "id": "REC_005",
     "query": "Recommend exactly 3 red wines under 50 euros.",
-    "bucket": "explicit_constraint"
+    "bucket": "explicit_constraint",
+    "scenario": "explicit_constraint"
   },
   {
     "id": "REC_006",
     "query": "Recommend 3 organic red wines under 50 euros.",
-    "bucket": "attribute_filter"
+    "bucket": "attribute_filter",
+    "scenario": "filter_attribute"
   },
   {
     "id": "REC_007",
     "query": "Recommend 3 Bordeaux red wines under 50 euros.",
-    "bucket": "region_specific"
+    "bucket": "region_specific",
+    "scenario": "filter_region"
   },
   {
     "id": "REC_008",
     "query": "Recommend 3 red wines under 50 euros but no Pinot Noir.",
-    "bucket": "negative_filter"
+    "bucket": "negative_filter",
+    "scenario": "negative_filter"
   },
   {
     "id": "REC_009",
     "query": "Recommend 3 elegant red wines under 50 euros for a date night.",
-    "bucket": "ambiguous_preference"
+    "bucket": "ambiguous_preference",
+    "scenario": "ambiguous_preference"
   },
   {
-    "id": "REC_010",    
+    "id": "REC_010",
     "query": "Recommend 3 red wines under 50 euros, but also include one option around 100 euros.",
-    "bucket": "adversarial_constraint"
+    "bucket": "adversarial_constraint",
+    "scenario": "adversarial_constraint"
   }
 ]

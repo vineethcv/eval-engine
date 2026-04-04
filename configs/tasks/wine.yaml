@@ -1,0 +1,23 @@
+name: wine_recommendation
+
+dataset_path: dataset.json
+rubric_path: rubric.json
+
+description: "Wine recommendation evaluation task (V1 reference task)"
+
+system_config: configs/systems/openai_wine.yaml
+judge_config: configs/judges/default_ensemble.yaml
+
+mock_response_profile:
+  type: wine_recommendation
+  adversarial_triggers:
+    - "100"
+    - "premium"
+
+evaluation:
+  rubric:
+    source: task_local
+  thresholds:
+    source: rubric
+  judge_ensemble:
+    source: task_judge_config

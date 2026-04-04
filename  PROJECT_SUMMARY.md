@@ -1,17 +1,19 @@
-# Eval Engine Learning Lab — Project Summary (V1)
+# Eval Engine Learning Lab — Project Summary (Boilerplate V1)
 
 ## Purpose
 
-This project is a lightweight evaluation framework for LLM systems.
+This project is a lightweight evaluation framework for LLM systems and AI application flows.
 
-It was built as a **learning lab** to explore how to evaluate non-deterministic AI outputs using a combination of:
+It began as a **learning lab** for exploring how to evaluate non-deterministic AI outputs using a combination of:
 
 - deterministic validation (rules)
 - heuristic scoring (structured signals)
 - LLM-as-judge (analytical signal)
 - regression comparison (stability tracking)
 
-The goal is not to build a production system, but to understand **evaluation design principles for AI systems**.
+It has now been refactored into a **Boilerplate V1** shape so the same architecture can be reused across future evaluation tasks while keeping the codebase intentionally small and understandable.
+
+The goal is still not to build a production-grade platform yet, but to understand and demonstrate **evaluation design principles for AI systems**.
 
 ---
 
@@ -21,11 +23,12 @@ Traditional QA assumes:
 - deterministic outputs
 - exact expected results
 
-LLM systems introduce:
+LLM systems and broader AI application flows introduce:
 - variability in responses
 - qualitative outputs
 - probabilistic reasoning
 - formatting inconsistencies
+- partial subjectivity in evaluation
 
 This makes simple pass/fail testing insufficient.
 
@@ -37,11 +40,10 @@ This project uses a **layered evaluation architecture**:
 
 ## Architecture
 
-
 ```text
 Dataset
 ↓
-Model Response
+System Under Test Response
 ↓
 Critical Gates (hard constraints)
 ↓
@@ -75,18 +77,46 @@ Regression Comparison
 - prompts, rubrics, and scoring logic all require careful design
 - evaluation is not trivial or secondary work
 
+### 5. Simplicity is intentional
+- the repo is intentionally lightweight
+- backward-compatible evolution is preferred over over-engineering
 ---
 
-## Current Capabilities (V1)
+## Current Capabilities (Boilerplate V1)
+
+## Config-driven architecture
+
+The framework now uses three main configuration layers:
+•	task config
+  •	dataset path
+  •	rubric path
+  •	evaluation wiring
+  •	mock response profile
+  •	selected judge config
+•	system config
+  •	system-under-test provider
+  •	model
+  •	temperature
+  •	mock support
+•	judge config
+  •	judge roles
+  •	base prompt
+  •	role instructions
+  •	rubric anchors
+  •	judge model / temperature
+
+This is the main architectural shift from the original learning-lab version.
 
 ### Dataset
-- Located in `dataset.json`
-- ~10 curated test cases
-- Covers:
-  - happy path
-  - constraints
-  - filters
-  - adversarial input
+•	Currently stored in dataset.json
+•	~10 curated evaluation cases
+•	Current fields include:
+  •	id
+  •	query
+  •	bucket
+  •	scenario
+
+The current reference dataset remains wine-focused.
 
 ### Rubric
 - Located in `rubric.json`
@@ -101,6 +131,28 @@ Regression Comparison
     - regional_diversity
     - language_tone
   - verdict thresholds
+
+### System Client (system_client.py)
+•	generalized from the old LLM-specific naming
+•	represents the system under test
+•	currently supports:
+  •	OpenAI-backed generation
+  •	mock-safe local execution path
+
+This is intended to be extended later for other AI application types.
+
+### Judge Client (judge_client.py)
+•	supports config-driven multi-judge evaluation
+•	current judge roles:
+  •	balanced evaluator
+  •	strict evaluator
+  •	usefulness evaluator
+•	supports:
+  •	base prompt + role overlay structure
+  •	rubric anchors from config
+  •	per-dimension judge scoring
+  •	judge standard deviation
+  •	judge agreement level
 
 ### Heuristic Scorer (`scorer.py`)
 - deterministic evaluation
@@ -117,79 +169,105 @@ Regression Comparison
   - missing data
   - borderline scores
 
-### LLM Client (`llm_client.py`)
-- generates responses using OpenAI
-- constrained prompt to reduce variability
-
-### Judge Client (`judge_client.py`)
-- multi-judge ensemble (3 variants):
-  - balanced evaluator
-  - strict critic
-  - usefulness evaluator
-- outputs:
-  - per-dimension scores
-  - mean score
-  - standard deviation
-  - individual judge outputs
-
 ### Runner (`runner.py`)
 - orchestrates full pipeline
 - supports:
   - mock mode (offline)
   - openai mode
   - optional judge execution (`--enable-judge`)
+  - config-driven task/system/judge wiring
   - baseline writing
 - outputs:
   - JSON results
   - CSV report
 
 ### Regression Comparison (`regression_compare.py`)
-- compares baseline vs latest run
-- detects:
-  - missing cases
-  - gate regressions
-  - score drops
-  - verdict regressions
+•	compares baseline vs latest run
+•	supports:
+  •	legacy flat result fields
+  •	standardized nested result schema
+•	detects:
+  •	missing cases
+  •	gate regressions
+  •	score drops
+  •	verdict regressions
 
 ---
 
 ## Output Schema
 
-Each result includes:
+Each result now includes structured sections such as:
+•	generator
+•	heuristic_evaluation
+•	judge_evaluation
+•	run_metadata
 
-- heuristic scores
-- weighted_score
-- verdict (PASS / WARN / FAIL)
-- gate_pass + reasons
-- optional judge metrics:
-  - judge_scores
-  - judge_weighted_score
-  - judge_stddev
-  - judge_delta
-  - judge_agreement_level
-- confidence
+Legacy top-level fields are still preserved for compatibility with regression and existing tooling.
 
 ---
+## Boilerplate Refactor Outcome
+
+The project is now in a hybrid but useful state:
+•	more reusable than the original domain-specific learning-lab version
+•	not yet fully domain-agnostic
+
+That is acceptable for Boilerplate V1.
+
+### What is now more generic
+•	config-driven task/system/judge wiring
+•	system-under-test abstraction
+•	judge role abstraction
+•	prompt template scaffolding
+•	standardized run result shape
+•	regression support across old and new result schemas
+
+### What remains intentionally task-specific
+•	wine-oriented reference task
+•	scorer dimensions
+•	parsing assumptions
+•	generator prompt content
+•	judge JSON dimension keys
+•	rubric anchors
+
+This is expected at this stage.
+
+⸻
+
+## Current Reference Example
+
+The framework still uses wine recommendation evaluation as the reference example task.
+
+This remains useful because it demonstrates:
+•	hard constraints
+•	qualitative scoring
+•	adversarial prompts
+•	subjective judge disagreement
+•	regression comparison
+
+Wine should be treated as the canonical example task, not the long-term identity of the framework.
+
+⸻
 
 ## What Works Well
+•	Clean separation of deterministic vs probabilistic evaluation
+•	Config-driven structure is now in place
+•	Judge disagreement provides meaningful analytical signals
+•	Regression comparison remains simple and effective
+•	Offline-safe execution remains intact
+•	Boilerplate refactor stayed incremental and backward-compatible
+•	Public-repo CI path is now aligned with GitHub-hosted runners
 
-- Clean separation of deterministic vs probabilistic evaluation
-- Judge disagreement provides meaningful signals
-- Simple but effective regression detection
-- Offline-safe execution (mock mode)
-- Small, understandable codebase
-
----
+⸻
 
 ## Known Limitations
+•	The reference implementation is still domain-shaped
+•	Heuristic scoring is simplistic
+•	Parsing is regex-based and brittle
+•	Judge depends on external API
+•	Small dataset limits coverage
+•	Full domain genericity is not complete yet
 
-- Domain-specific (wine recommendations)
-- Heuristic scoring is simplistic
-- Parsing is regex-based (not robust)
-- Judge depends on external API
-- Small dataset limits coverage
-
----
+⸻
 
 ## Important Constraints (Do Not Break)
 
@@ -209,41 +287,60 @@ When extending this project:
 5. **Avoid over-engineering**
    - simplicity is intentional
 
----
+⸻
 
-## Suggested Future Directions
+## CI / Workflow Status
 
-- Visualization of judge disagreement
-- Judge reliability testing (multiple runs)
-- Cross-model judge comparison
-- Rubric refinement based on judge signals
-- Larger and more diverse dataset
-- Better parsing (structured extraction)
+The project workflows have been updated for public-repo readiness:
+•	no dependency on self-hosted runners
+•	GitHub-hosted runner flow for smoke and mock eval execution
+•	mock-mode-friendly CI path retained
 
----
+This keeps the public repo simpler and safer to run.
+
+⸻
+
+## Suggested Next Step
+
+The next best validation step is not a large refactor.
+
+Instead, the strongest next move would be to add one more example task using the same boilerplate structure, such as:
+•	customer support response evaluation
+•	retrieval QA / RAG answer evaluation
+•	simple agent task completion evaluation
+
+That would test whether Boilerplate V1 is genuinely reusable without making the framework too abstract too early.
+
+⸻
 
 ## How to Use This File (For Future AI Assistants)
 
 This file provides:
-- system intent
-- architecture
-- constraints
-- design philosophy
+•	project purpose
+•	architecture
+•	constraints
+•	current system shape
+•	design philosophy
+•	known limitations
 
 When modifying the project:
-- prioritize consistency with existing architecture
-- avoid introducing conflicting evaluation logic
-- preserve deterministic vs analytical separation
+•	prioritize consistency with the current architecture
+•	preserve deterministic vs analytical separation
+•	protect backward compatibility where practical
+•	avoid introducing judge-driven operational decisions
 
----
+⸻
 
 ## Status
 
-V1 complete:
-- evaluation pipeline stable
-- judge ensemble integrated
-- regression comparison working
-- repo structured and published
+Boilerplate V1 complete:
+•	config-driven structure in place
+•	system/judge abstractions introduced
+•	standardized result schema added
+•	regression comparison compatibility preserved
+•	public-repo workflow path updated
+•	reference example retained
 
 Next phase:
-- analysis and insight, not infrastructure
+•	validate reusability with a second task
+•	continue analysis and insight work, not large infrastructure expansion

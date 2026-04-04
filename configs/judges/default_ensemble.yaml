@@ -1,0 +1,64 @@
+name: default_judge_ensemble
+
+enabled: false
+model: gpt-4o-mini
+temperature: 0.0
+
+base_prompt: |
+  You are evaluating a system response using a rubric.
+
+  {role_instruction}
+
+  Return valid JSON with exactly these keys:
+  - tasting_clarity
+  - popularity_alignment
+  - regional_diversity
+  - language_tone
+  - reasoning
+
+  Scoring rules:
+  - Each score must be an integer from 1 to 5
+  - Be conservative
+  - A score of 5 should be rare
+  - Base scores only on the provided response
+
+  Rubric:
+  {rubric_json}
+
+  Scoring anchors:
+  {rubric_anchors_json}
+
+  User query:
+  {query}
+
+  System response:
+  {response}
+
+roles:
+  - name: balanced
+    prompt_key: balanced
+    instruction: "You are a balanced evaluator. Score fairly across all rubric dimensions."
+  - name: strict
+    prompt_key: strict
+    instruction: "You are a conservative critic. Penalize weak evidence and give high scores rarely."
+  - name: usefulness
+    prompt_key: usefulness
+    instruction: "You are a usefulness-focused evaluator. Prioritize practical value to the end user."
+
+rubric_anchors:
+  tasting_clarity:
+    "1": "No useful tasting description."
+    "3": "Some sensory detail, but still generic."
+    "5": "Clear, vivid, and specific tasting description."
+  popularity_alignment:
+    "1": "Recommendations feel implausible or poorly matched to common preference."
+    "3": "Somewhat reasonable, but not especially convincing."
+    "5": "Strongly plausible and well aligned with likely user preference."
+  regional_diversity:
+    "1": "Little or no diversity in regional representation."
+    "3": "Some diversity, but limited."
+    "5": "Clearly diverse regional representation where appropriate."
+  language_tone:
+    "1": "Awkward, unclear, or poorly phrased."
+    "3": "Generally understandable but plain or uneven."
+    "5": "Clear, polished, natural, and user-friendly."

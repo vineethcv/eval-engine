@@ -2,127 +2,150 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from typing import Any, Dict, List
 
 
-def load_results(path: str) -> Dict[str, Any]:
+def load_json(path: str) -> Any:
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
-def index_by_id(results: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+def extract_results(payload: Any) -> List[Dict[str, Any]]:
+    if isinstance(payload, list):
+        return payload
+
+    if isinstance(payload, dict):
+        if "results" in payload and isinstance(payload["results"], list):
+            return payload["results"]
+
+    raise TypeError("Expected results payload to be a list or a dict containing a 'results' list.")
+
+
+def get_case_map(results: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
     return {row["id"]: row for row in results}
 
 
-def compare_runs(
-    baseline: Dict[str, Any],
-    latest: Dict[str, Any],
+def get_weighted_score(row: Dict[str, Any]) -> float:
+    if "weighted_score" in row:
+        return float(row["weighted_score"])
+
+    heuristic = row.get("heuristic_evaluation", {})
+    if "weighted_score" in heuristic:
+        return float(heuristic["weighted_score"])
+
+    raise KeyError(f"weighted_score not found for row id={row.get('id')}")
+
+
+def get_verdict(row: Dict[str, Any]) -> str:
+    if "verdict" in row:
+        return str(row["verdict"])
+
+    heuristic = row.get("heuristic_evaluation", {})
+    if "verdict" in heuristic:
+        return str(heuristic["verdict"])
+
+    raise KeyError(f"verdict not found for row id={row.get('id')}")
+
+
+def get_gate_pass(row: Dict[str, Any]) -> bool:
+    if "gate_pass" in row:
+        return bool(row["gate_pass"])
+
+    heuristic = row.get("heuristic_evaluation", {})
+    if "gate_pass" in heuristic:
+        return bool(heuristic["gate_pass"])
+
+    raise KeyError(f"gate_pass not found for row id={row.get('id')}")
+
+
+def compare_results(
+    baseline: List[Dict[str, Any]],
+    latest: List[Dict[str, Any]],
     max_drop: float,
-) -> List[Dict[str, Any]]:
-    baseline_results = index_by_id(baseline.get("results", []))
-    latest_results = index_by_id(latest.get("results", []))
+) -> int:
+    baseline_map = get_case_map(baseline)
+    latest_map = get_case_map(latest)
 
-    regressions: List[Dict[str, Any]] = []
+    exit_code = 0
 
-    for case_id, base_row in baseline_results.items():
-        latest_row = latest_results.get(case_id)
+    missing_cases = sorted(set(baseline_map.keys()) - set(latest_map.keys()))
+    if missing_cases:
+        print("ERROR: Missing cases in latest run:")
+        for case_id in missing_cases:
+            print(f"  - {case_id}")
+        exit_code = 1
 
-        if latest_row is None:
-            regressions.append(
-                {
-                    "id": case_id,
-                    "type": "missing_case",
-                    "message": "Case missing in latest run",
-                }
-            )
+    for case_id, base_row in baseline_map.items():
+        if case_id not in latest_map:
             continue
 
-        if base_row.get("gate_pass") and not latest_row.get("gate_pass"):
-            regressions.append(
-                {
-                    "id": case_id,
-                    "type": "critical_gate_regression",
-                    "message": "Critical gate changed from PASS to FAIL",
-                }
-            )
+        latest_row = latest_map[case_id]
 
-        base_score = float(base_row.get("weighted_score", 0))
-        latest_score = float(latest_row.get("weighted_score", 0))
+        base_gate_pass = get_gate_pass(base_row)
+        latest_gate_pass = get_gate_pass(latest_row)
+
+        if base_gate_pass and not latest_gate_pass:
+            print(f"ERROR: Gate regression for {case_id}")
+            exit_code = 1
+
+        base_score = get_weighted_score(base_row)
+        latest_score = get_weighted_score(latest_row)
+
         score_drop = round(base_score - latest_score, 2)
-
         if score_drop > max_drop:
-            regressions.append(
-                {
-                    "id": case_id,
-                    "type": "score_drop",
-                    "message": f"Weighted score dropped by {score_drop}",
-                    "baseline_score": base_score,
-                    "latest_score": latest_score,
-                }
+            print(
+                f"ERROR: Score drop too large for {case_id} "
+                f"(baseline={base_score}, latest={latest_score}, drop={score_drop})"
             )
+            exit_code = 1
 
-        base_verdict = base_row.get("verdict")
-        latest_verdict = latest_row.get("verdict")
+        base_verdict = get_verdict(base_row)
+        latest_verdict = get_verdict(latest_row)
 
-        if base_verdict == "PASS" and latest_verdict in {"WARN", "FAIL"}:
-            regressions.append(
-                {
-                    "id": case_id,
-                    "type": "verdict_regression",
-                    "message": f"Verdict changed from {base_verdict} to {latest_verdict}",
-                }
+        verdict_rank = {"FAIL": 0, "WARN": 1, "PASS": 2}
+        if verdict_rank.get(latest_verdict, -1) < verdict_rank.get(base_verdict, -1):
+            print(
+                f"ERROR: Verdict regression for {case_id} "
+                f"(baseline={base_verdict}, latest={latest_verdict})"
             )
-        elif base_verdict == "WARN" and latest_verdict == "FAIL":
-            regressions.append(
-                {
-                    "id": case_id,
-                    "type": "verdict_regression",
-                    "message": f"Verdict changed from {base_verdict} to {latest_verdict}",
-                }
-            )
+            exit_code = 1
 
-    return regressions
+    if exit_code == 0:
+        print("OK: No regression detected.")
+
+    return exit_code
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Compare eval runs for regressions.")
-    parser.add_argument("baseline", help="Path to baseline results JSON")
-    parser.add_argument("latest", help="Path to latest results JSON")
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Compare eval results against baseline.")
+    parser.add_argument("baseline_path", type=str, help="Path to baseline results JSON")
+    parser.add_argument("latest_path", type=str, help="Path to latest results JSON")
     parser.add_argument(
         "--max-drop",
         type=float,
         default=0.3,
-        help="Maximum allowed weighted score drop before flagging regression",
+        help="Maximum allowed weighted score drop before failing",
     )
+    return parser.parse_args()
 
-    args = parser.parse_args()
 
-    baseline = load_results(args.baseline)
-    latest = load_results(args.latest)
+def main() -> None:
+    args = parse_args()
 
-    regressions = compare_runs(baseline, latest, args.max_drop)
+    baseline_payload = load_json(args.baseline_path)
+    latest_payload = load_json(args.latest_path)
 
-    baseline_count = len(baseline.get("results", []))
-    latest_count = len(latest.get("results", []))
-    compared_count = min(baseline_count, latest_count)
+    baseline = extract_results(baseline_payload)
+    latest = extract_results(latest_payload)
 
-    print("\nRegression comparison summary")
-    print(f" - baseline: {args.baseline}")
-    print(f" - latest:   {args.latest}")
-    print(f" - baseline cases: {baseline_count}")
-    print(f" - latest cases:   {latest_count}")
-    print(f" - compared cases: {compared_count}")
-    print(f" - regressions found: {len(regressions)}")
-
-    if regressions:
-        print("\nRegressions:")
-        for reg in regressions:
-            print(f" - [{reg['id']}] {reg['type']}: {reg['message']}")
-        return 1
-
-    print("\nNo regressions found.")
-    return 0
+    exit_code = compare_results(
+        baseline=baseline,
+        latest=latest,
+        max_drop=args.max_drop,
+    )
+    sys.exit(exit_code)
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
