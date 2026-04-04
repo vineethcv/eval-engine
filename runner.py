@@ -315,7 +315,19 @@ def main():
         judge_config_path=judge_config_path,)
 
     results: List[Dict[str, Any]] = []
+    system_client = None
 
+    if args.mode == "openai":
+        effective_model = args.model or system_config["model"]
+        effective_temperature = args.temperature
+        if effective_temperature is None:
+            effective_temperature = system_config.get("temperature", 0.0)
+
+        runtime_system_config = dict(system_config)
+        runtime_system_config["model"] = effective_model
+        runtime_system_config["temperature"] = effective_temperature
+
+        system_client = build_system_client(runtime_system_config)
     for case in dataset:
         query = case["query"]
 
@@ -323,15 +335,6 @@ def main():
         if args.mode == "mock":
             response = mock_system_respond(query, task_config)
         elif args.mode == "openai":
-            effective_model = args.model or system_config["model"]
-            effective_temperature = args.temperature
-
-            if effective_temperature is None:
-                effective_temperature = system_config.get("temperature", 0.0)
-            runtime_system_config = dict(system_config)
-            runtime_system_config["model"] = effective_model
-            runtime_system_config["temperature"] = effective_temperature
-            system_client = build_system_client(runtime_system_config)
             response = system_client.generate(query)
         else:
             raise ValueError(f"Unsupported mode: {args.mode}")
