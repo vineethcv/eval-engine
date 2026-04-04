@@ -8,7 +8,7 @@ from typing import Any, Dict, List
 
 from openai import OpenAI
 
-JUDGE_PROMPT_VERSION = "v1.0"
+JUDGE_PROMPT_VERSION = "v1.1"
 
 
 class JudgeClientError(RuntimeError):
@@ -21,32 +21,7 @@ class JudgeRole:
     prompt_key: str
 
 
-def _get_openai_client() -> OpenAI:
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise JudgeClientError("OPENAI_API_KEY env var not set.")
-    return OpenAI(api_key=api_key)
-
-
-def _build_role_instruction(role: JudgeRole) -> str:
-    if role.prompt_key == "balanced":
-        return "You are a balanced evaluator. Score fairly across all rubric dimensions."
-    if role.prompt_key == "strict":
-        return "You are a conservative critic. Penalize weak evidence and give high scores rarely."
-    if role.prompt_key == "usefulness":
-        return "You are a usefulness-focused evaluator. Prioritize practical value to the end user."
-    raise ValueError(f"Unsupported judge prompt key: {role.prompt_key}")
-
-
-def _build_judge_prompt(
-    query: str,
-    response: str,
-    rubric: Dict[str, Any],
-    role: JudgeRole,
-) -> str:
-    role_instruction = _build_role_instruction(role)
-
-    return f"""
+JUDGE_BASE_PROMPT_TEMPLATE = """
 You are evaluating a system response using a rubric.
 
 {role_instruction}
@@ -65,7 +40,7 @@ Scoring rules:
 - Base scores only on the provided response
 
 Rubric:
-{json.dumps(rubric, indent=2)}
+{rubric_json}
 
 User query:
 {query}
@@ -73,6 +48,43 @@ User query:
 System response:
 {response}
 """.strip()
+
+
+JUDGE_ROLE_OVERLAYS = {
+    "balanced": "You are a balanced evaluator. Score fairly across all rubric dimensions.",
+    "strict": "You are a conservative critic. Penalize weak evidence and give high scores rarely.",
+    "usefulness": "You are a usefulness-focused evaluator. Prioritize practical value to the end user.",
+}
+
+
+def _get_openai_client() -> OpenAI:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise JudgeClientError("OPENAI_API_KEY env var not set.")
+    return OpenAI(api_key=api_key)
+
+
+def _build_role_instruction(role: JudgeRole) -> str:
+    try:
+        return JUDGE_ROLE_OVERLAYS[role.prompt_key]
+    except KeyError as exc:
+        raise ValueError(f"Unsupported judge prompt key: {role.prompt_key}") from exc
+
+
+def _build_judge_prompt(
+    query: str,
+    response: str,
+    rubric: Dict[str, Any],
+    role: JudgeRole,
+) -> str:
+    role_instruction = _build_role_instruction(role)
+
+    return JUDGE_BASE_PROMPT_TEMPLATE.format(
+        role_instruction=role_instruction,
+        rubric_json=json.dumps(rubric, indent=2),
+        query=query,
+        response=response,
+    )
 
 
 def _call_openai_judge(
