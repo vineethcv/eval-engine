@@ -1,19 +1,18 @@
 # Python
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
 .venv/
-venv/
-.env
+.pytest_cache/
 
-# OS
-.DS_Store
+# Env
+.env
 
 # Outputs
 results/
+baselines/
 *.log
 
-# Editors
+# OS / editors
+.DS_Store
 .vscode/
 .idea/
