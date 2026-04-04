@@ -71,7 +71,7 @@ This makes the framework reusable for:
 	•	agent workflow evaluation
 	•	retrieval or RAG response evaluation
 	•	other structured AI output evaluation tasks
-
+For extension guidance, see: `docs/boilerplate_extension_guide.md`
 ⸻
 
 ## Current reference example
