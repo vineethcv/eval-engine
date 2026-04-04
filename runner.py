@@ -72,6 +72,54 @@ def get_task_judge_ensemble_config(
 
     return judge_config
 
+def build_result_record(
+    case: Dict[str, Any],
+    response: str,
+    heuristic_result: Any,
+    confidence: float,
+    run_metadata: Dict[str, Any],
+    judge_result: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    flat_heuristic = evalresult_to_flat_dict(heuristic_result)
+
+    gate_reasons = flat_heuristic.get("gate_reasons")
+    if gate_reasons is None:
+        gate_reasons = flat_heuristic.get("reasons", [])
+
+    record: Dict[str, Any] = {
+        "id": case["id"],
+        "query": case["query"],
+        "bucket": case.get("bucket"),
+        "response": response,
+        "confidence": confidence,
+        "generator": {
+            "response": response,
+        },
+        "heuristic_evaluation": {
+            "scores": {
+                "tasting_clarity": flat_heuristic.get("tasting_clarity"),
+                "popularity_alignment": flat_heuristic.get("popularity_alignment"),
+                "regional_diversity": flat_heuristic.get("regional_diversity"),
+                "language_tone": flat_heuristic.get("language_tone"),
+            },
+            "weighted_score": flat_heuristic.get("weighted_score"),
+            "verdict": flat_heuristic.get("verdict"),
+            "gate_pass": flat_heuristic.get("gate_pass"),
+            "gate_reasons": gate_reasons,
+        },
+        "judge_evaluation": judge_result if judge_result else None,
+        "run_metadata": run_metadata,
+    }
+
+    # Preserve legacy top-level fields for compatibility.
+    record.update(flat_heuristic)
+    record["confidence"] = confidence
+
+    if judge_result:
+        record.update(judge_result)
+
+    return record
+
 def write_json(path: str, data: Any) -> None:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
@@ -85,7 +133,6 @@ def write_csv(path: str, rows: List[Dict[str, Any]]) -> None:
         writer = csv.DictWriter(f, fieldnames=keys)
         writer.writeheader()
         writer.writerows(rows)
-
 
 def build_run_metadata(args: argparse.Namespace) -> Dict[str, Any]:
     judge_enabled = args.mode == "openai" and args.enable_judge
@@ -305,16 +352,15 @@ def main():
         # Confidence
         confidence = compute_confidence(eval_result)
 
-        result = {
-            "id": case["id"],
-            "query": query,
-            "response": response,
-            **flat_eval,
-            **judge_summary,
-            "confidence": confidence,
-        }
-
-        results.append(result)
+        result_record = build_result_record(
+            case=case,
+            response=response,
+            heuristic_result=eval_result,
+            confidence=confidence,
+            run_metadata=run_metadata,
+            judge_result=judge_result if judge_enabled else None,
+        )
+        results.append(result_record)
 
     # Write outputs
     latest_path = "results/latest_results.json"
