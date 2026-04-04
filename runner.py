@@ -73,7 +73,7 @@ def get_task_judge_ensemble_config(
     return judge_config
 
 def build_result_record(
-    case: Dict[str, Any],
+    eval_case: Dict[str, Any],
     response: str,
     heuristic_result: Any,
     confidence: float,
@@ -87,10 +87,10 @@ def build_result_record(
         gate_reasons = flat_heuristic.get("reasons", [])
 
     record: Dict[str, Any] = {
-        "id": case["id"],
-        "query": case["query"],
-        "bucket": case.get("bucket"),
-        "scenario": case.get("scenario"),
+        "id": eval_case["id"],
+        "query": eval_case["query"],
+        "bucket": eval_case.get("bucket"),
+        "scenario": eval_case.get("scenario"),
         "response": response,
         "confidence": confidence,
         "generator": {
@@ -354,7 +354,7 @@ def main():
         confidence = compute_confidence(eval_result)
 
         result_record = build_result_record(
-            case=case,
+            eval_case=case,
             response=response,
             heuristic_result=eval_result,
             confidence=confidence,
