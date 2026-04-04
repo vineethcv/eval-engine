@@ -72,6 +72,11 @@ def get_task_judge_ensemble_config(
 
     return judge_config
 
+def validate_mock_mode_support(system_config: Dict[str, Any]) -> None:
+    mock_support = system_config.get("mock_support", {})
+    if not mock_support.get("enabled", False):
+        raise ValueError("Selected system config does not support mock mode.")
+    
 def build_result_record(
     eval_case: Dict[str, Any],
     response: str,
@@ -296,6 +301,8 @@ def main():
     dataset = load_json(task_config["dataset_path"])
     rubric = get_task_rubric(task_config)
     thresholds = get_task_thresholds(task_config, rubric)
+    if args.mode == "mock":
+        validate_mock_mode_support(system_config)
 
     if args.limit:
         dataset = dataset[: args.limit]
@@ -315,7 +322,7 @@ def main():
         # Model response
         if args.mode == "mock":
             response = mock_system_respond(query, task_config)
-        else:
+        elif args.mode == "openai":
             effective_model = args.model or system_config["model"]
             effective_temperature = args.temperature
 
@@ -324,9 +331,10 @@ def main():
             runtime_system_config = dict(system_config)
             runtime_system_config["model"] = effective_model
             runtime_system_config["temperature"] = effective_temperature
-
             system_client = build_system_client(runtime_system_config)
             response = system_client.generate(query)
+        else:
+            raise ValueError(f"Unsupported mode: {args.mode}")
 
         # Heuristic scoring
         eval_result = evaluate_case(query, response, rubric)
