@@ -6,9 +6,10 @@ import statistics
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
+import yaml
 from openai import OpenAI
 
-JUDGE_PROMPT_VERSION = "v1.1"
+JUDGE_PROMPT_VERSION = "v1.2"
 
 
 class JudgeClientError(RuntimeError):
@@ -19,42 +20,7 @@ class JudgeClientError(RuntimeError):
 class JudgeRole:
     name: str
     prompt_key: str
-
-
-JUDGE_BASE_PROMPT_TEMPLATE = """
-You are evaluating a system response using a rubric.
-
-{role_instruction}
-
-Return valid JSON with exactly these keys:
-- tasting_clarity
-- popularity_alignment
-- regional_diversity
-- language_tone
-- reasoning
-
-Scoring rules:
-- Each score must be an integer from 1 to 5
-- Be conservative
-- A score of 5 should be rare
-- Base scores only on the provided response
-
-Rubric:
-{rubric_json}
-
-User query:
-{query}
-
-System response:
-{response}
-""".strip()
-
-
-JUDGE_ROLE_OVERLAYS = {
-    "balanced": "You are a balanced evaluator. Score fairly across all rubric dimensions.",
-    "strict": "You are a conservative critic. Penalize weak evidence and give high scores rarely.",
-    "usefulness": "You are a usefulness-focused evaluator. Prioritize practical value to the end user.",
-}
+    instruction: str
 
 
 def _get_openai_client() -> OpenAI:
@@ -64,11 +30,13 @@ def _get_openai_client() -> OpenAI:
     return OpenAI(api_key=api_key)
 
 
+def load_judge_config(path: str) -> Dict[str, Any]:
+    with open(path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
 def _build_role_instruction(role: JudgeRole) -> str:
-    try:
-        return JUDGE_ROLE_OVERLAYS[role.prompt_key]
-    except KeyError as exc:
-        raise ValueError(f"Unsupported judge prompt key: {role.prompt_key}") from exc
+    return role.instruction
 
 
 def _build_judge_prompt(
@@ -76,12 +44,15 @@ def _build_judge_prompt(
     response: str,
     rubric: Dict[str, Any],
     role: JudgeRole,
+    judge_config: Dict[str, Any],
 ) -> str:
-    role_instruction = _build_role_instruction(role)
+    base_prompt = judge_config["base_prompt"]
+    rubric_anchors = judge_config.get("rubric_anchors", {})
 
-    return JUDGE_BASE_PROMPT_TEMPLATE.format(
-        role_instruction=role_instruction,
+    return base_prompt.format(
+        role_instruction=_build_role_instruction(role),
         rubric_json=json.dumps(rubric, indent=2),
+        rubric_anchors_json=json.dumps(rubric_anchors, indent=2),
         query=query,
         response=response,
     )
@@ -148,6 +119,7 @@ def judge_response(
     response: str,
     rubric: Dict[str, Any],
     role: JudgeRole,
+    judge_config: Dict[str, Any],
     model: str = "gpt-4o-mini",
     temperature: float = 0.0,
 ) -> Dict[str, Any]:
@@ -156,6 +128,7 @@ def judge_response(
         response=response,
         rubric=rubric,
         role=role,
+        judge_config=judge_config,
     )
     result = _call_openai_judge(prompt=prompt, model=model, temperature=temperature)
 
@@ -177,13 +150,17 @@ def judge_response_ensemble(
     query: str,
     response: str,
     rubric: Dict[str, Any],
+    judge_config: Dict[str, Any],
     model: str = "gpt-4o-mini",
     temperature: float = 0.0,
 ) -> Dict[str, Any]:
     roles = [
-        JudgeRole(name="balanced", prompt_key="balanced"),
-        JudgeRole(name="strict", prompt_key="strict"),
-        JudgeRole(name="usefulness", prompt_key="usefulness"),
+        JudgeRole(
+            name=role_cfg["name"],
+            prompt_key=role_cfg["prompt_key"],
+            instruction=role_cfg["instruction"],
+        )
+        for role_cfg in judge_config["roles"]
     ]
 
     individual = []
@@ -193,6 +170,7 @@ def judge_response_ensemble(
             response=response,
             rubric=rubric,
             role=role,
+            judge_config=judge_config,
             model=model,
             temperature=temperature,
         )

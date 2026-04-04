@@ -14,7 +14,11 @@ from typing import Any, Dict, List
 
 from confidence import compute_confidence
 from system_client import build_system_client, SYSTEM_PROMPT_VERSION
-from judge_client import judge_response_ensemble, JUDGE_PROMPT_VERSION
+from judge_client import (
+    JUDGE_PROMPT_VERSION,
+    judge_response_ensemble,
+    load_judge_config,
+)
 from scorer import evaluate_case, evalresult_to_flat_dict
 
 RUBRIC_VERSION = "v1.0"
@@ -219,7 +223,7 @@ def main():
     judge_config_path = args.judge_config or task_config["judge_config"]
 
     system_config = load_yaml(system_config_path)
-    judge_config = load_yaml(judge_config_path)
+    judge_config = load_judge_config(judge_config_path)
     dataset = load_json(task_config["dataset_path"])
     rubric = get_task_rubric(task_config)
     thresholds = get_task_thresholds(task_config, rubric)
@@ -261,11 +265,13 @@ def main():
         judge_enabled = args.mode == "openai" and args.enable_judge
 
         if judge_enabled:
-            judge_bundle = judge_response_ensemble(
+            judge_result = judge_response_ensemble(
                 query=query,
                 response=response,
                 rubric=rubric,
-                model=args.model,
+                judge_config=judge_config,
+                model=judge_config.get("model", args.model or "gpt-4o-mini"),
+                temperature=judge_config.get("temperature", 0.0),
             )
 
             judge_summary = compute_judge_summary(
