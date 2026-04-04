@@ -5,6 +5,9 @@ model: gpt-4o-mini
 temperature: 0.0
 
 roles:
-  - balanced
-  - strict
-  - usefulness
+  - name: balanced
+    prompt_key: balanced
+  - name: strict
+    prompt_key: strict
+  - name: usefulness
+    prompt_key: usefulness
