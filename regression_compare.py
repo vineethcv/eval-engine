@@ -1,87 +1,128 @@
-# eval-engine/regression_compare.py
 from __future__ import annotations
 
+import argparse
 import json
-import sys
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List
 
 
-def load(path: str) -> Dict[str, Any]:
+def load_results(path: str) -> Dict[str, Any]:
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
-def index_by_case(results: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
-    """
-    Input is runner's latest_results.json structure:
-    { run_at, summary, results: [ { case, response, critical_gate, dimension_scores, weighted_score, verdict } ... ] }
-    """
-    out: Dict[str, Dict[str, Any]] = {}
-    for r in results.get("results", []):
-        cid = r.get("case", {}).get("id")
-        if cid:
-            out[str(cid)] = r
-    return out
+def index_by_id(results: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    return {row["id"]: row for row in results}
 
 
-def main() -> None:
-    if len(sys.argv) < 3:
-        print("Usage: python3 regression_compare.py <baseline.json> <latest.json> [max_drop]")
-        sys.exit(2)
+def compare_runs(
+    baseline: Dict[str, Any],
+    latest: Dict[str, Any],
+    max_drop: float,
+) -> List[Dict[str, Any]]:
+    baseline_results = index_by_id(baseline.get("results", []))
+    latest_results = index_by_id(latest.get("results", []))
 
-    baseline_path = sys.argv[1]
-    latest_path = sys.argv[2]
-    max_drop = float(sys.argv[3]) if len(sys.argv) >= 4 else 0.3
+    regressions: List[Dict[str, Any]] = []
 
-    base = load(baseline_path)
-    latest = load(latest_path)
+    for case_id, base_row in baseline_results.items():
+        latest_row = latest_results.get(case_id)
 
-    b = index_by_case(base)
-    l = index_by_case(latest)
-
-    regressions = []
-
-    for cid, bcase in b.items():
-        if cid not in l:
-            regressions.append((cid, "missing_in_latest", "", ""))
+        if latest_row is None:
+            regressions.append(
+                {
+                    "id": case_id,
+                    "type": "missing_case",
+                    "message": "Case missing in latest run",
+                }
+            )
             continue
 
-        lcase = l[cid]
+        if base_row.get("gate_pass") and not latest_row.get("gate_pass"):
+            regressions.append(
+                {
+                    "id": case_id,
+                    "type": "critical_gate_regression",
+                    "message": "Critical gate changed from PASS to FAIL",
+                }
+            )
 
-        b_gate = bool(bcase.get("critical_gate", {}).get("passed", False))
-        l_gate = bool(lcase.get("critical_gate", {}).get("passed", False))
+        base_score = float(base_row.get("weighted_score", 0))
+        latest_score = float(latest_row.get("weighted_score", 0))
+        score_drop = round(base_score - latest_score, 2)
 
-        b_score = float(bcase.get("weighted_score", 0.0))
-        l_score = float(lcase.get("weighted_score", 0.0))
+        if score_drop > max_drop:
+            regressions.append(
+                {
+                    "id": case_id,
+                    "type": "score_drop",
+                    "message": f"Weighted score dropped by {score_drop}",
+                    "baseline_score": base_score,
+                    "latest_score": latest_score,
+                }
+            )
 
-        b_verdict = str(bcase.get("verdict", ""))
-        l_verdict = str(lcase.get("verdict", ""))
+        base_verdict = base_row.get("verdict")
+        latest_verdict = latest_row.get("verdict")
 
-        # Critical regression: gate was passing and now fails
-        if b_gate and not l_gate:
-            regressions.append((cid, "critical_gate_regression", b_verdict, l_verdict))
-            continue
+        if base_verdict == "PASS" and latest_verdict in {"WARN", "FAIL"}:
+            regressions.append(
+                {
+                    "id": case_id,
+                    "type": "verdict_regression",
+                    "message": f"Verdict changed from {base_verdict} to {latest_verdict}",
+                }
+            )
+        elif base_verdict == "WARN" and latest_verdict == "FAIL":
+            regressions.append(
+                {
+                    "id": case_id,
+                    "type": "verdict_regression",
+                    "message": f"Verdict changed from {base_verdict} to {latest_verdict}",
+                }
+            )
 
-        # Score regression (only if both pass gates)
-        if b_gate and l_gate:
-            drop = b_score - l_score
-            if drop > max_drop:
-                regressions.append((cid, f"score_drop>{max_drop} (drop={drop:.2f})", f"{b_score}", f"{l_score}"))
+    return regressions
 
-            # Verdict regression: PASS->WARN/FAIL or WARN->FAIL
-            order = {"PASS": 2, "WARN": 1, "FAIL": 0}
-            if order.get(l_verdict, -1) < order.get(b_verdict, -1):
-                regressions.append((cid, "verdict_regression", b_verdict, l_verdict))
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Compare eval runs for regressions.")
+    parser.add_argument("baseline", help="Path to baseline results JSON")
+    parser.add_argument("latest", help="Path to latest results JSON")
+    parser.add_argument(
+        "--max-drop",
+        type=float,
+        default=0.3,
+        help="Maximum allowed weighted score drop before flagging regression",
+    )
+
+    args = parser.parse_args()
+
+    baseline = load_results(args.baseline)
+    latest = load_results(args.latest)
+
+    regressions = compare_runs(baseline, latest, args.max_drop)
+
+    baseline_count = len(baseline.get("results", []))
+    latest_count = len(latest.get("results", []))
+    compared_count = min(baseline_count, latest_count)
+
+    print("\nRegression comparison summary")
+    print(f" - baseline: {args.baseline}")
+    print(f" - latest:   {args.latest}")
+    print(f" - baseline cases: {baseline_count}")
+    print(f" - latest cases:   {latest_count}")
+    print(f" - compared cases: {compared_count}")
+    print(f" - regressions found: {len(regressions)}")
 
     if regressions:
-        print("REGRESSIONS DETECTED:")
-        for cid, kind, before, after in regressions:
-            print(f"- {cid}: {kind} ({before} -> {after})")
-        sys.exit(1)
+        print("\nRegressions:")
+        for reg in regressions:
+            print(f" - [{reg['id']}] {reg['type']}: {reg['message']}")
+        return 1
 
-    print("No regressions detected.")
-    sys.exit(0)
+    print("\nNo regressions found.")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
