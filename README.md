@@ -336,6 +336,8 @@ Longer-term exploration:
 	•	rubric refinement
 	•	evaluation analytics
 
+For current refactor status, see: `docs/boilerplate_v1_status.md`
+
 ## License
 
 MIT
