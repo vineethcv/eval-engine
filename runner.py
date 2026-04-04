@@ -60,6 +60,18 @@ def get_task_thresholds(task_config: Dict[str, Any], rubric: Dict[str, Any]) -> 
 
     return rubric["thresholds"]
 
+def get_task_judge_ensemble_config(
+    task_config: Dict[str, Any],
+    judge_config: Dict[str, Any],
+) -> Dict[str, Any]:
+    evaluation_cfg = task_config.get("evaluation", {})
+    judge_ensemble_cfg = evaluation_cfg.get("judge_ensemble", {})
+
+    if judge_ensemble_cfg.get("source") != "task_judge_config":
+        raise ValueError("Unsupported judge ensemble source in task config.")
+
+    return judge_config
+
 def write_json(path: str, data: Any) -> None:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
@@ -224,6 +236,7 @@ def main():
 
     system_config = load_yaml(system_config_path)
     judge_config = load_judge_config(judge_config_path)
+    task_judge_config = get_task_judge_ensemble_config(task_config, judge_config)
     dataset = load_json(task_config["dataset_path"])
     rubric = get_task_rubric(task_config)
     thresholds = get_task_thresholds(task_config, rubric)
@@ -269,9 +282,9 @@ def main():
                 query=query,
                 response=response,
                 rubric=rubric,
-                judge_config=judge_config,
-                model=judge_config.get("model", args.model or "gpt-4o-mini"),
-                temperature=judge_config.get("temperature", 0.0),
+                judge_config=task_judge_config,
+                model=task_judge_config.get("model", args.model or "gpt-4o-mini"),
+                temperature=task_judge_config.get("temperature", 0.0),
             )
 
             judge_summary = compute_judge_summary(

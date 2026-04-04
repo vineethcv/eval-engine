@@ -19,3 +19,5 @@ evaluation:
     source: task_local
   thresholds:
     source: rubric
+  judge_ensemble:
+    source: task_judge_config
