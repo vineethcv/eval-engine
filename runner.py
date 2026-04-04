@@ -1,4 +1,3 @@
-# eval-engine/runner.py
 from __future__ import annotations
 
 import argparse
@@ -7,248 +6,234 @@ import json
 import os
 from datetime import datetime, timezone
 from typing import Any, Dict, List
+
 from confidence import compute_confidence
-from llm_client import respond_openai
 from llm_client import respond_openai, PROMPT_VERSION
 from judge_client import judge_response_ensemble, JUDGE_PROMPT_VERSION
-
 from scorer import evaluate_case, evalresult_to_flat_dict
-RUBRIC_VERSION = "v1.0"
 
+RUBRIC_VERSION = "v1.0"
+DATASET_VERSION = "v1.0"
+
+
+# ----------------------------
+# Helpers
+# ----------------------------
 
 def load_json(path: str) -> Any:
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
+
 def ensure_dir(path: str) -> None:
     os.makedirs(path, exist_ok=True)
 
+
+def write_json(path: str, data: Any) -> None:
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+
+def write_csv(path: str, rows: List[Dict[str, Any]]) -> None:
+    if not rows:
+        return
+    keys = rows[0].keys()
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=keys)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def build_run_metadata(args: argparse.Namespace) -> Dict[str, Any]:
+    return {
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "mode": args.mode,
+        "model": args.model,
+        "temperature": args.temperature,
+        "prompt_version": PROMPT_VERSION if args.mode == "openai" else "mock_v1",
+        "judge_prompt_version": JUDGE_PROMPT_VERSION,
+        "rubric_version": RUBRIC_VERSION,
+        "dataset_version": DATASET_VERSION,
+    }
+
+
 # ----------------------------
-# Mock model (Week 2: infra-first)
-# Replace this with real model calls in Week 3.
+# Mock model
 # ----------------------------
+
 def mock_llm_respond(query: str) -> str:
     q = query.lower()
 
     # Adversarial asks for €100 option
     if "100" in q or "premium" in q:
-        return (
-            "1. Rioja Crianza (Spain) – €18\n"
-            "Approachable and smooth with red berry notes.\n\n"
-            "2. Chianti Classico (Italy) – €24\n"
-            "Elegant acidity, light tannins, notes of cherry.\n\n"
-            "3. Côtes du Rhône (France) – €16\n"
-            "Soft spice and blackberry, easy-drinking.\n\n"
-            "Note: I’m keeping all picks under €50 as requested."
-        )
+        return """1. Château Margaux — Bordeaux, France — €120
+Elegant and complex with cassis, cedar, and fine tannins.
 
-    # Negative filter: no Pinot Noir
-    if "no pinot" in q or "without pinot" in q:
-        return (
-            "1. Merlot (France) – €22\n"
-            "Smooth, low tannins, plum and cherry.\n\n"
-            "2. Tempranillo Rioja (Spain) – €19\n"
-            "Medium-bodied, vanilla and red berries, very approachable.\n\n"
-            "3. Sangiovese (Italy) – €23\n"
-            "Fresh cherry notes, balanced acidity, easy for beginners."
-        )
+2. Barolo DOCG — Piedmont, Italy — €45
+Firm tannins with cherry, rose, and earthy notes.
 
-    # Steak / dinner context
-    if "steak" in q:
-        return (
-            "1. Malbec (Argentina) – €20\n"
-            "Plush dark fruit, medium tannins, great with steak.\n\n"
-            "2. Cabernet Sauvignon (Chile) – €18\n"
-            "Blackcurrant notes, structured but approachable.\n\n"
-            "3. Rioja Crianza (Spain) – €21\n"
-            "Oak-tinged vanilla and cherry, smooth finish."
-        )
+3. Rioja Reserva — Rioja, Spain — €30
+Smooth and balanced with vanilla, spice, and red fruit."""
+    
+    return """1. Bordeaux Blend — Bordeaux, France — €40
+Rich blackcurrant, oak, and spice.
 
-    # Italian preference
-    if "italian" in q or "italy" in q:
-        return (
-            "1. Chianti Classico (Italy) – €24\n"
-            "Cherry, subtle herbs, balanced acidity, smooth tannins.\n\n"
-            "2. Montepulciano d'Abruzzo (Italy) – €16\n"
-            "Soft plum notes, easy-drinking, medium body.\n\n"
-            "3. Nero d'Avola (Italy) – €17\n"
-            "Ripe berry fruit, gentle spice, approachable finish."
-        )
+2. Chianti Classico — Tuscany, Italy — €25
+Cherry, herbs, and bright acidity.
 
-    # Default strong-ish answer
-    return (
-        "1. Merlot (France) – €22\n"
-        "Smooth, fruit-forward, low tannins with plum and cherry.\n\n"
-        "2. Rioja Crianza (Spain) – €19\n"
-        "Medium-bodied, vanilla and red berries, balanced and approachable.\n\n"
-        "3. Chianti Classico (Italy) – €24\n"
-        "Elegant acidity, soft structure, bright cherry notes."
+3. Rioja Crianza — Rioja, Spain — €20
+Vanilla, red fruit, and soft tannins."""
+
+
+# ----------------------------
+# Main
+# ----------------------------
+
+def main():
+    parser = argparse.ArgumentParser(description="Eval Engine Runner")
+
+    parser.add_argument("--dataset", default="dataset.json")
+    parser.add_argument("--rubric", default="rubric.json")
+
+    parser.add_argument(
+        "--mode",
+        choices=["mock", "openai"],
+        default="mock",
     )
 
+    parser.add_argument("--model", default="gpt-4o-mini")
+    parser.add_argument("--temperature", type=float, default=0.0)
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", choices=["mock", "openai"], default="mock")
-    parser.add_argument("--model", default="gpt-4o-mini")  # you can change later
-    parser.add_argument("--temperature", type=float, default=0.2)
-    parser.add_argument("--dataset", default="dataset.json")
     parser.add_argument("--limit", type=int, default=None)
-    parser.add_argument("--rubric", default="rubric.json")
-    parser.add_argument("--outdir", default="results")
-    parser.add_argument("--set-baseline", action="store_true", 
-                        help="Overwrite results/baseline_results.json with this run")
-    parser.add_argument("--write-baseline", action="store_true",
-                        help="Write baselines/baseline_results.json from this run")
+
+    parser.add_argument(
+        "--write-baseline",
+        action="store_true",
+        help="Write baseline to baselines/baseline_results.json",
+    )
+
     args = parser.parse_args()
 
     dataset = load_json(args.dataset)
-    rubric: Dict[str, Any] = load_json(args.rubric)
+    rubric = load_json(args.rubric)
 
-    ensure_dir(args.outdir)
+    if args.limit:
+        dataset = dataset[: args.limit]
 
-    all_results = []
-    flat_rows = []
-    dataset_iter = dataset[:args.limit] if args.limit else dataset
-    for case in dataset_iter:
-        query = str(case.get("query", ""))
-        if case["id"] == "REC_001":
-            response = "1. Red Wine - €10\n2. Another Red Wine - €12\n3. Cheap Red Wine - €8"
+    ensure_dir("results")
+    ensure_dir("baselines")
+
+    run_metadata = build_run_metadata(args)
+
+    results: List[Dict[str, Any]] = []
+
+    for case in dataset:
+        query = case["query"]
+
+        # ----------------------------
+        # Model response
+        # ----------------------------
         if args.mode == "mock":
             response = mock_llm_respond(query)
         else:
-            response = respond_openai(query, model=args.model, temperature=args.temperature)
-        er = evaluate_case(case, response, rubric)
+            response = respond_openai(
+                query=query,
+                model=args.model,
+                temperature=args.temperature,
+            )
+
+        # ----------------------------
+        # Heuristic scoring
+        # ----------------------------
+        eval_result = evaluate_case(query, response, rubric)
+        flat_eval = evalresult_to_flat_dict(eval_result)
+
+        # ----------------------------
+        # Judge evaluation (always on for now — will be fixed in next commit)
+        # ----------------------------
         judge_bundle = judge_response_ensemble(
-            query,
-            response,
-            rubric,
-            model=args.model
+            query=query,
+            response=response,
+            rubric=rubric,
+            model=args.model,
         )
 
         judge_scores = judge_bundle["ensemble_mean_scores"]
         judge_stddev = judge_bundle["ensemble_stddev_scores"]
         judge_individual = judge_bundle["individual_judges"]
-        judge_weighted = (
-            judge_scores["tasting_clarity"] * rubric["weights"]["tasting_clarity"] +
-            judge_scores["popularity_alignment"] * rubric["weights"]["popularity_alignment"] +
-            judge_scores["regional_diversity"] * rubric["weights"]["regional_diversity"] +
-            judge_scores["language_tone"] * rubric["weights"]["language_tone"]
-        )
-        judge_delta = round(judge_weighted - er.weighted_score, 2)
-        max_judge_stddev = max(judge_stddev.values())
 
-        if max_judge_stddev < 0.5:
-            judge_agreement_level = "high"
-        elif max_judge_stddev < 0.8:
-            judge_agreement_level = "medium"
+        weights = rubric.get("weights", {})
+        judge_weighted_score = round(
+            sum(judge_scores[k] * weights.get(k, 0) for k in judge_scores),
+            2,
+        )
+
+        judge_delta = round(
+            judge_weighted_score - flat_eval["weighted_score"], 2
+        )
+
+        max_stddev = max(judge_stddev.values()) if judge_stddev else 0.0
+        if max_stddev < 0.5:
+            agreement = "high"
+        elif max_stddev < 0.8:
+            agreement = "medium"
         else:
-            judge_agreement_level = "low"
-        dim_scores = {
-            "tasting_clarity": er.dimension_scores.tasting_clarity,
-            "popularity_alignment": er.dimension_scores.popularity_alignment,
-            "regional_diversity": er.dimension_scores.regional_diversity,
-            "language_tone": er.dimension_scores.language_tone,
-        }
-        conf = compute_confidence(response, er.critical_gate.passed, dim_scores)
-        all_results.append({
-            "case": case,
+            agreement = "low"
+
+        # ----------------------------
+        # Confidence
+        # ----------------------------
+        confidence = compute_confidence(eval_result)
+
+        # ----------------------------
+        # Final result
+        # ----------------------------
+        result = {
+            "id": case["id"],
+            "query": query,
             "response": response,
-            "critical_gate": {
-                "passed": er.critical_gate.passed,
-                "reasons": er.critical_gate.reasons,
-            },
-            "dimension_scores": dim_scores,
-            "weighted_score": er.weighted_score,
-            "verdict": er.verdict,
-            "eval_confidence": conf,
-            "notes": er.notes,
+            **flat_eval,
             "judge_scores": judge_scores,
-            "judge_weighted_score": round(judge_weighted, 2),
+            "judge_weighted_score": judge_weighted_score,
             "judge_stddev": judge_stddev,
             "judge_individual": judge_individual,
             "judge_delta": judge_delta,
-            "judge_agreement_level": judge_agreement_level,
-        })
-        flat = evalresult_to_flat_dict(er)
-        flat["judge_tasting_clarity"] = judge_scores["tasting_clarity"]
-        flat["judge_popularity_alignment"] = judge_scores["popularity_alignment"]
-        flat["judge_regional_diversity"] = judge_scores["regional_diversity"]
-        flat["judge_language_tone"] = judge_scores["language_tone"]
-        flat["judge_weighted_score"] = round(judge_weighted, 2)
+            "judge_agreement_level": agreement,
+            "confidence": confidence,
+        }
 
-        flat["judge_stddev_tasting"] = judge_stddev["tasting_clarity"]
-        flat["judge_stddev_popularity"] = judge_stddev["popularity_alignment"]
-        flat["judge_stddev_diversity"] = judge_stddev["regional_diversity"]
-        flat["judge_stddev_tone"] = judge_stddev["language_tone"]
-        flat["judge_agreement_level"] = judge_agreement_level
-        flat["judge_delta"] = judge_delta
-        flat_rows.append(flat)
+        results.append(result)
 
-    run_payload = {
-        "run_at": datetime.now(timezone.utc).isoformat(),
-        "run_config": {
-            "mode": args.mode,
-            "model": args.model if args.mode != "mock" else "mock",
-            "temperature": args.temperature if args.mode != "mock" else None,
-            "prompt_version": PROMPT_VERSION if args.mode != "mock" else None,
-            "rubric_version": RUBRIC_VERSION,
-            "judge_model": args.model if args.mode != "mock" else None,
-            "judge_prompt_version": JUDGE_PROMPT_VERSION if args.mode != "mock" else None,
-            "judge_runs": 3 if args.mode != "mock" else 0,
-        },
-        "summary": {
-            "total": len(flat_rows),
-            "pass": sum(1 for r in flat_rows if r["verdict"] == "PASS"),
-            "warn": sum(1 for r in flat_rows if r["verdict"] == "WARN"),
-            "fail": sum(1 for r in flat_rows if r["verdict"] == "FAIL"),
-        },
-        "results": all_results,
-    }
+    # ----------------------------
+    # Write outputs
+    # ----------------------------
+    latest_path = "results/latest_results.json"
+    write_json(latest_path, {"metadata": run_metadata, "results": results})
 
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_path = f"results/run_{timestamp}.json"
+    write_json(run_path, {"metadata": run_metadata, "results": results})
+
+    flat_rows = [r for r in results]
+    csv_path = "results/report.csv"
+    write_csv(csv_path, flat_rows)
+
+    print(f"\nSaved results:")
+    print(f" - {latest_path}")
+    print(f" - {run_path}")
+    print(f" - {csv_path}")
+
+    # ----------------------------
+    # Baseline write (FIXED)
+    # ----------------------------
     if args.write_baseline:
-        os.makedirs("baselines", exist_ok=True)
-        baseline_path = os.path.join("baselines", "baseline_results.json")
-        with open(baseline_path, "w", encoding="utf-8") as f:
-            json.dump(run_payload, f, ensure_ascii=False, indent=2)
-        print(f"Baseline written: {baseline_path}")
+        baseline_path = "baselines/baseline_results.json"
+        write_json(
+            baseline_path,
+            {"metadata": run_metadata, "results": results},
+        )
+        print(f"\nBaseline written to {baseline_path}")
 
-    # Write latest JSON
-    latest_json_path = os.path.join(args.outdir, "latest_results.json")
-    with open(latest_json_path, "w", encoding="utf-8") as f:
-        json.dump(run_payload, f, ensure_ascii=False, indent=2)
-
-    # Write timestamped JSON
-    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    run_json_path = os.path.join(args.outdir, f"run_{ts}.json")
-    with open(run_json_path, "w", encoding="utf-8") as f:
-        json.dump(run_payload, f, ensure_ascii=False, indent=2)
-
-    # CSV report
-    csv_path = os.path.join(args.outdir, "report.csv")
-    fieldnames = list(flat_rows[0].keys()) if flat_rows else []
-    with open(csv_path, "w", encoding="utf-8", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=fieldnames)
-        w.writeheader()
-        for r in flat_rows:
-            w.writerow(r)
-
-    # Baseline
-    if args.set_baseline:
-        baseline_path = os.path.join(args.outdir, "baseline_results.json")
-        with open(baseline_path, "w", encoding="utf-8") as f:
-            json.dump(run_payload, f, ensure_ascii=False, indent=2)
-        print(f"Baseline set: {baseline_path}")
-
-    print(f"Wrote: {latest_json_path}")
-    print(f"Wrote: {run_json_path}")
-    print(f"Wrote: {csv_path}")
-
-    totals = {
-        "PASS": sum(1 for r in flat_rows if r["verdict"] == "PASS"),
-        "WARN": sum(1 for r in flat_rows if r["verdict"] == "WARN"),
-        "FAIL": sum(1 for r in flat_rows if r["verdict"] == "FAIL"),
-    }
-    print("Summary:", totals)
 
 if __name__ == "__main__":
     main()
