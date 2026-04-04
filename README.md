@@ -1,6 +1,6 @@
 # Eval Engine Learning Lab
 
-A lightweight evaluation framework for LLM systems.
+A minimal, practical evaluation framework for LLM systems combining deterministic scoring and LLM-based analysis.
 
 This project explores how to evaluate **non-deterministic AI outputs** using a layered approach:
 - deterministic rules (critical gates)
@@ -44,21 +44,27 @@ Key principle:
 
 ## Repo structure
 
-eval-engine/
-├── dataset.json
-├── rubric.json
-├── runner.py
-├── scorer.py
-├── confidence.py
-├── llm_client.py
-├── judge_client.py
-├── regression_compare.py
+```text
+.
+├── dataset.json              # evaluation queries
+├── rubric.json              # scoring rules & weights
+├── runner.py                # main evaluation pipeline
+├── scorer.py                # deterministic scoring logic
+├── confidence.py            # evaluation confidence signal
+├── llm_client.py            # OpenAI response generation∏
+├── judge_client.py          # LLM-as-judge ensemble
+├── regression_compare.py    # regression detection
+│
+├── tests/                   # minimal test coverage
+├── examples/                # sample outputs
+│
 ├── README.md
 ├── requirements.txt
-├── .gitignore
 ├── .env.example
+├── .gitignore
+└── LICENSE
 
----
+```
 
 ## Quickstart
 
@@ -96,44 +102,50 @@ Compare runs
 python3 regression_compare.py baselines/baseline_results.json results/latest_results.json --max-drop 0.3
 ⸻
 
-Output artifacts
-	•	results/latest_results.json
-	•	results/run_<timestamp>.json
-	•	results/report.csv
+```
+
+## Output artifacts
+
+Each run generates:
+
+- `results/latest_results.json` → latest evaluation snapshot  
+- `results/run_<timestamp>.json` → historical run  
+- `results/report.csv` → flat table for analysis  
 
 Each result includes:
-	•	heuristic scores
-	•	verdict (PASS/WARN/FAIL)
-	•	optional judge metrics
-	•	evaluation confidence
+- heuristic scores
+- verdict (PASS / WARN / FAIL)
+- optional judge metrics
+- evaluation confidence
 
-⸻
+---
 
-Design principles
-	•	Deterministic logic governs decisions
-	•	Judges are not decision-makers
-	•	Disagreement is a signal, not a bug
-	•	Evaluation itself requires engineering
+## Design principles
 
-⸻
+- Deterministic logic governs decisions  
+- Judges are **not** decision-makers  
+- Disagreement is a signal, not a bug  
+- Evaluation itself requires engineering  
 
-Current limitations
-	•	Domain-specific (wine recommendations)
-	•	Heuristic scoring is simplified
-	•	Judge depends on OpenAI API
-	•	Small dataset
+---
 
-⸻
+## Current limitations
 
-Roadmap
-	•	Judge disagreement visualization
-	•	Judge reliability testing
-	•	Cross-model comparison
-	•	Rubric refinement
-	•	Evaluation analytics
+- Domain-specific (wine recommendations)  
+- Heuristic scoring is simplified  
+- Judge depends on OpenAI API  
+- Small dataset  
 
-⸻
+---
 
-License
+## Roadmap
+
+- Judge disagreement visualization  
+- Judge reliability testing  
+- Cross-model comparison  
+- Rubric refinement  
+- Evaluation analytics 
+
+## License
 
 MIT
