@@ -45,13 +45,16 @@ def write_csv(path: str, rows: List[Dict[str, Any]]) -> None:
 
 
 def build_run_metadata(args: argparse.Namespace) -> Dict[str, Any]:
+    judge_enabled = args.mode == "openai" and args.enable_judge
     return {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "mode": args.mode,
         "model": args.model,
         "temperature": args.temperature,
         "prompt_version": PROMPT_VERSION if args.mode == "openai" else "mock_v1",
-        "judge_prompt_version": JUDGE_PROMPT_VERSION,
+        "judge_enabled": judge_enabled,
+        "judge_runs": 3 if judge_enabled else 0,
+        "judge_prompt_version": JUDGE_PROMPT_VERSION if judge_enabled else None,
         "rubric_version": RUBRIC_VERSION,
         "dataset_version": DATASET_VERSION,
     }
@@ -74,7 +77,7 @@ Firm tannins with cherry, rose, and earthy notes.
 
 3. Rioja Reserva — Rioja, Spain — €30
 Smooth and balanced with vanilla, spice, and red fruit."""
-    
+
     return """1. Bordeaux Blend — Bordeaux, France — €40
 Rich blackcurrant, oak, and spice.
 
@@ -103,6 +106,11 @@ def main():
 
     parser.add_argument("--model", default="gpt-4o-mini")
     parser.add_argument("--temperature", type=float, default=0.0)
+    parser.add_argument(
+        "--enable-judge",
+        action="store_true",
+        help="Run LLM judge ensemble (OpenAI mode only).",
+    )
 
     parser.add_argument("--limit", type=int, default=None)
 
@@ -149,36 +157,46 @@ def main():
         flat_eval = evalresult_to_flat_dict(eval_result)
 
         # ----------------------------
-        # Judge evaluation (always on for now — will be fixed in next commit)
+        # Judge evaluation (optional)
         # ----------------------------
-        judge_bundle = judge_response_ensemble(
-            query=query,
-            response=response,
-            rubric=rubric,
-            model=args.model,
-        )
+        judge_enabled = args.mode == "openai" and args.enable_judge
 
-        judge_scores = judge_bundle["ensemble_mean_scores"]
-        judge_stddev = judge_bundle["ensemble_stddev_scores"]
-        judge_individual = judge_bundle["individual_judges"]
+        if judge_enabled:
+            judge_bundle = judge_response_ensemble(
+                query=query,
+                response=response,
+                rubric=rubric,
+                model=args.model,
+            )
 
-        weights = rubric.get("weights", {})
-        judge_weighted_score = round(
-            sum(judge_scores[k] * weights.get(k, 0) for k in judge_scores),
-            2,
-        )
+            judge_scores = judge_bundle["ensemble_mean_scores"]
+            judge_stddev = judge_bundle["ensemble_stddev_scores"]
+            judge_individual = judge_bundle["individual_judges"]
 
-        judge_delta = round(
-            judge_weighted_score - flat_eval["weighted_score"], 2
-        )
+            weights = rubric.get("weights", {})
+            judge_weighted_score = round(
+                sum(judge_scores[k] * weights.get(k, 0) for k in judge_scores),
+                2,
+            )
 
-        max_stddev = max(judge_stddev.values()) if judge_stddev else 0.0
-        if max_stddev < 0.5:
-            agreement = "high"
-        elif max_stddev < 0.8:
-            agreement = "medium"
+            judge_delta = round(
+                judge_weighted_score - flat_eval["weighted_score"], 2
+            )
+
+            max_stddev = max(judge_stddev.values()) if judge_stddev else 0.0
+            if max_stddev < 0.5:
+                agreement = "high"
+            elif max_stddev < 0.8:
+                agreement = "medium"
+            else:
+                agreement = "low"
         else:
-            agreement = "low"
+            judge_scores = None
+            judge_weighted_score = None
+            judge_stddev = None
+            judge_individual = []
+            judge_delta = None
+            agreement = None
 
         # ----------------------------
         # Confidence
@@ -224,7 +242,7 @@ def main():
     print(f" - {csv_path}")
 
     # ----------------------------
-    # Baseline write (FIXED)
+    # Baseline write
     # ----------------------------
     if args.write_baseline:
         baseline_path = "baselines/baseline_results.json"
