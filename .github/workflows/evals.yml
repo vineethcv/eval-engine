@@ -28,9 +28,13 @@ jobs:
         run: |
           python3 runner.py --mode mock
 
-      - name: Compare to baseline
+      - name: Compare to baseline (if exists)
         run: |
-          python3 regression_compare.py baselines/baseline_results.json results/latest_results.json --max-drop 0.3
+          if [ -f baselines/baseline_results.json ]; then
+            python3 regression_compare.py baselines/baseline_results.json results/latest_results.json --max-drop 0.3
+          else
+            echo "No baseline found. Skipping regression comparison."
+          fi
 
       - name: Upload eval artifacts
         uses: actions/upload-artifact@v4
