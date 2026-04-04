@@ -1,54 +1,82 @@
-# eval-engine/llm_client.py
 from __future__ import annotations
 
 import os
 from typing import Optional
 
+from openai import OpenAI
+
+PROMPT_VERSION = "v1.0-wine-recommendation"
+
 
 class LLMClientError(RuntimeError):
-    pass
+    """Raised when the LLM client fails to produce a valid response."""
 
-PROMPT_VERSION = "v2.0-3item-notes-region"
 
-def respond_openai(query: str, model: str, temperature: float) -> str:
-    """
-    Minimal OpenAI client using the official SDK.
-    Requires:
-      - pip install openai
-      - env var: OPENAI_API_KEY
-    """
+def _get_client() -> OpenAI:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise LLMClientError("OPENAI_API_KEY env var not set.")
+    return OpenAI(api_key=api_key)
 
-    # Lazy import so mock mode doesn't require the dependency
-    from openai import OpenAI
 
-    client = OpenAI(api_key=api_key)
+def respond_openai(
+    query: str,
+    model: str = "gpt-4o-mini",
+    temperature: float = 0.0,
+) -> str:
+    """
+    Generate a wine recommendation response using OpenAI.
 
-    system = (
-        "You are a wine recommendation assistant.\n"
-        "You MUST follow the output rules exactly.\n\n"
-        "OUTPUT RULES:\n"
-        "- Output EXACTLY 3 items and nothing else.\n"
-        "- Each item MUST be a red wine under €50.\n"
-        "- Each item MUST include: Wine name, Country/Region, Price, and a short tasting note.\n"
-        "- The tasting note must be 8–20 words and include at least TWO sensory descriptors "
-        "(e.g., cherry, plum, blackberry, vanilla, oak, tannins, acidity, medium-bodied).\n"
-        "- Use the euro symbol '€' for prices.\n\n"
-        "FORMAT (exactly 3 lines):\n"
-        "1. <Wine name> (<Country/Region>) - €<number> - <tasting note>\n"
-        "2. <Wine name> (<Country/Region>) - €<number> - <tasting note>\n"
-        "3. <Wine name> (<Country/Region>) - €<number> - <tasting note>\n"
-    )
+    This is the generation client (not evaluation).
+    The prompt is intentionally constrained to make evaluation easier.
+    """
 
-    resp = client.chat.completions.create(
-        model=model,
-        temperature=temperature,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": query},
-        ],
-    )
+    system_prompt = """
+You are a helpful wine recommendation assistant.
 
-    return resp.choices[0].message.content or ""
+STRICT RULES:
+- Recommend EXACTLY 3 wines
+- ALL wines must be RED wines
+- ALL wines must be UNDER 50 euros
+- Each recommendation must include:
+  - Wine name
+  - Region and country
+  - Approximate price in euros
+  - Short tasting note
+
+FORMAT:
+1. Wine Name — Region, Country — €Price
+Tasting note.
+
+2. Wine Name — Region, Country — €Price
+Tasting note.
+
+3. Wine Name — Region, Country — €Price
+Tasting note.
+
+Do not include anything else.
+"""
+
+    client = _get_client()
+
+    try:
+        resp = client.chat.completions.create(
+            model=model,
+            temperature=temperature,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": query},
+            ],
+        )
+    except Exception as exc:
+        raise LLMClientError(f"OpenAI request failed: {exc}") from exc
+
+    try:
+        content = resp.choices[0].message.content or ""
+    except Exception as exc:
+        raise LLMClientError("Malformed response from OpenAI.") from exc
+
+    if not content.strip():
+        raise LLMClientError("OpenAI returned empty response.")
+
+    return content
