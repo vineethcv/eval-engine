@@ -1,52 +1,31 @@
-# eval-engine/confidence.py
-from __future__ import annotations
-
 from typing import Dict, Any
-from scorer import extract_items, extract_prices, distinct_regions, genericness, _normalize
+
+from scorer import EvalResult
 
 
-def compute_confidence(response: str, gate_passed: bool, dimension_scores: Dict[str, float]) -> float:
+def compute_confidence(result: EvalResult) -> float:
     """
-    Returns confidence 1.0–5.0 (heuristic).
-    This is confidence in the *eval score* (not the model's confidence).
+    Estimate confidence in the evaluation itself (not model confidence).
+
+    Lower confidence when:
+    - parsing is weak
+    - borderline scores
+    - limited signal in response
     """
-    if not gate_passed:
-        return 4.5  # we are usually confident about hard failures (deterministic)
 
-    t = _normalize(response)
+    score = result.weighted_score
 
-    # Signals that reduce confidence (uncertainty in scoring)
-    items = extract_items(response)
-    priced = sum(1 for it in items if extract_prices(it))
-    regions = distinct_regions(response)
-    gen = genericness(response)
+    # Penalize near-boundary scores
+    if 3.0 <= score <= 3.6:
+        score_adj = 0.2
+    else:
+        score_adj = 0.0
 
-    penalties = 0.0
+    # Penalize weak parsing signals
+    item_penalty = 0.2 if result.notes.get("item_count", 0) < 3 else 0
+    price_penalty = 0.2 if result.notes.get("price_count", 0) < 3 else 0
+    region_penalty = 0.2 if result.notes.get("region_count", 0) < 2 else 0
 
-    # If we can't clearly detect 3 priced items, scoring is less reliable
-    if priced < 3:
-        penalties += 1.0
+    confidence = 1.0 - (score_adj + item_penalty + price_penalty + region_penalty)
 
-    # If regions are not explicit, diversity score is less reliable
-    if regions == 0:
-        penalties += 0.8
-
-    # If very generic language, tasting/tone scoring becomes more subjective
-    if gen >= 2:
-        penalties += 0.7
-
-    # If weighted score is borderline, confidence should drop a bit
-    # (close to thresholds = more disagreement risk)
-    weighted = (
-        dimension_scores["tasting_clarity"] * 0.3 +
-        dimension_scores["popularity_alignment"] * 0.3 +
-        dimension_scores["regional_diversity"] * 0.2 +
-        dimension_scores["language_tone"] * 0.2
-    )
-    if 3.3 <= weighted <= 3.7:
-        penalties += 0.5
-
-    base = 4.5
-    conf = max(1.0, min(5.0, base - penalties))
-    # round for reporting
-    return round(conf, 1)
+    return round(max(0.0, confidence), 2)
