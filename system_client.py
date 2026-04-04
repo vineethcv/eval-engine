@@ -1,20 +1,20 @@
 from __future__ import annotations
 
 import os
+from typing import Any, Dict, Protocol
 
 from openai import OpenAI
-from typing import Protocol
-
-
-class SystemClient(Protocol):
-    def generate(self, query: str) -> str:
-        ...
 
 SYSTEM_PROMPT_VERSION = "v1.0-wine-recommendation"
 
 
 class SystemClientError(RuntimeError):
     """Raised when the system-under-test client fails to produce a valid response."""
+
+
+class SystemClient(Protocol):
+    def generate(self, query: str) -> str:
+        ...
 
 
 def _get_openai_client() -> OpenAI:
@@ -37,30 +37,30 @@ def generate_openai_response(
     """
 
     system_prompt = """
-    You are a helpful wine recommendation assistant.
+You are a helpful wine recommendation assistant.
 
-    STRICT RULES:
-    - Recommend EXACTLY 3 wines
-    - ALL wines must be RED wines
-    - ALL wines must be UNDER 50 euros
-    - Each recommendation must include:
-    - Wine name
-    - Region and country
-    - Approximate price in euros
-    - Short tasting note
+STRICT RULES:
+- Recommend EXACTLY 3 wines
+- ALL wines must be RED wines
+- ALL wines must be UNDER 50 euros
+- Each recommendation must include:
+  - Wine name
+  - Region and country
+  - Approximate price in euros
+  - Short tasting note
 
-    FORMAT:
-    1. Wine Name — Region, Country — €Price
-    Tasting note.
+FORMAT:
+1. Wine Name — Region, Country — €Price
+Tasting note.
 
-    2. Wine Name — Region, Country — €Price
-    Tasting note.
+2. Wine Name — Region, Country — €Price
+Tasting note.
 
-    3. Wine Name — Region, Country — €Price
-    Tasting note.
+3. Wine Name — Region, Country — €Price
+Tasting note.
 
-    Do not include anything else.
-    """
+Do not include anything else.
+"""
 
     client = _get_openai_client()
 
@@ -86,6 +86,7 @@ def generate_openai_response(
 
     return content
 
+
 class OpenAISystemClient:
     def __init__(self, model: str, temperature: float):
         self.model = model
@@ -97,3 +98,15 @@ class OpenAISystemClient:
             model=self.model,
             temperature=self.temperature,
         )
+
+
+def build_system_client(system_config: Dict[str, Any]) -> SystemClient:
+    provider = system_config.get("provider")
+
+    if provider == "openai":
+        return OpenAISystemClient(
+            model=system_config["model"],
+            temperature=system_config.get("temperature", 0.0),
+        )
+
+    raise ValueError(f"Unsupported system provider: {provider}")
