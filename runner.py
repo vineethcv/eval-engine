@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from confidence import compute_confidence
-from llm_client import respond_openai, PROMPT_VERSION
+from system_client import generate_openai_response, SYSTEM_PROMPT_VERSION
 from judge_client import judge_response_ensemble, JUDGE_PROMPT_VERSION
 from scorer import evaluate_case, evalresult_to_flat_dict
 
@@ -54,7 +54,7 @@ def build_run_metadata(args: argparse.Namespace) -> Dict[str, Any]:
         "mode": args.mode,
         "model": args.model,
         "temperature": args.temperature,
-        "prompt_version": PROMPT_VERSION if args.mode == "openai" else "mock_v1",
+        "prompt_version": SYSTEM_PROMPT_VERSION if args.mode == "openai" else "mock_v1",
         "judge_enabled": judge_enabled,
         "judge_runs": 3 if judge_enabled else 0,
         "judge_prompt_version": JUDGE_PROMPT_VERSION if judge_enabled else None,
@@ -184,7 +184,7 @@ def main():
         if args.mode == "mock":
             response = mock_llm_respond(query)
         else:
-            response = respond_openai(
+            response = generate_openai_response(
                 query=query,
                 model=args.model,
                 temperature=args.temperature,

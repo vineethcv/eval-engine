@@ -1,34 +1,33 @@
 from __future__ import annotations
 
 import os
-from typing import Optional
 
 from openai import OpenAI
 
-PROMPT_VERSION = "v1.0-wine-recommendation"
+SYSTEM_PROMPT_VERSION = "v1.0-wine-recommendation"
 
 
-class LLMClientError(RuntimeError):
-    """Raised when the LLM client fails to produce a valid response."""
+class SystemClientError(RuntimeError):
+    """Raised when the system-under-test client fails to produce a valid response."""
 
 
-def _get_client() -> OpenAI:
+def _get_openai_client() -> OpenAI:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        raise LLMClientError("OPENAI_API_KEY env var not set.")
+        raise SystemClientError("OPENAI_API_KEY env var not set.")
     return OpenAI(api_key=api_key)
 
 
-def respond_openai(
+def generate_openai_response(
     query: str,
     model: str = "gpt-4o-mini",
     temperature: float = 0.0,
 ) -> str:
     """
-    Generate a wine recommendation response using OpenAI.
+    Generate a response from the current system under test using OpenAI.
 
-    This is the generation client (not evaluation).
-    The prompt is intentionally constrained to make evaluation easier.
+    This remains the generation client, not the evaluation layer.
+    The current implementation is still wine-specific and OpenAI-backed.
     """
 
     system_prompt = """
@@ -57,7 +56,7 @@ Tasting note.
 Do not include anything else.
 """
 
-    client = _get_client()
+    client = _get_openai_client()
 
     try:
         resp = client.chat.completions.create(
@@ -69,14 +68,14 @@ Do not include anything else.
             ],
         )
     except Exception as exc:
-        raise LLMClientError(f"OpenAI request failed: {exc}") from exc
+        raise SystemClientError(f"OpenAI request failed: {exc}") from exc
 
     try:
         content = resp.choices[0].message.content or ""
     except Exception as exc:
-        raise LLMClientError("Malformed response from OpenAI.") from exc
+        raise SystemClientError("Malformed response from OpenAI.") from exc
 
     if not content.strip():
-        raise LLMClientError("OpenAI returned empty response.")
+        raise SystemClientError("OpenAI returned empty response.")
 
     return content
