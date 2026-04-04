@@ -25,6 +25,7 @@ This repo demonstrates a **practical evaluation architecture** to handle that.
 
 ## Architecture
 
+```text
 Dataset
 ↓
 Model Response
@@ -36,7 +37,7 @@ Heuristic Scoring (deterministic)
 (Optional) Judge Ensemble (LLM)
 ↓
 Regression Comparison
-
+```
 Key principle:
 > Heuristics decide PASS/FAIL. Judges provide analytical insight.
 
