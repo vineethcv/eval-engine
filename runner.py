@@ -342,7 +342,7 @@ def main():
 
         # Judge evaluation
         judge_enabled = args.mode == "openai" and args.enable_judge
-
+        judge_result = None
         if judge_enabled:
             judge_result = judge_response_ensemble(
                 query=query,
@@ -352,21 +352,6 @@ def main():
                 model=task_judge_config.get("model", args.model or "gpt-4o-mini"),
                 temperature=task_judge_config.get("temperature", 0.0),
             )
-
-            judge_summary = compute_judge_summary(
-                judge_bundle,
-                rubric,
-                flat_eval["weighted_score"],
-            )
-        else:
-            judge_summary = {
-                "judge_scores": None,
-                "judge_weighted_score": None,
-                "judge_stddev": None,
-                "judge_individual": [],
-                "judge_delta": None,
-                "judge_agreement_level": None,
-            }
 
         # Confidence
         confidence = compute_confidence(eval_result)
