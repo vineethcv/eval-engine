@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dotenv import load_dotenv
+import yaml
 
 load_dotenv()
 
@@ -31,6 +32,9 @@ def load_json(path: str) -> Any:
 def ensure_dir(path: str) -> None:
     os.makedirs(path, exist_ok=True)
 
+def load_yaml(path: str) -> Any:
+    with open(path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f)
 
 def write_json(path: str, data: Any) -> None:
     with open(path, "w", encoding="utf-8") as f:
@@ -137,6 +141,12 @@ Vanilla, red fruit, and soft tannins."""
 def main():
     parser = argparse.ArgumentParser(description="Eval Engine Runner")
 
+    parser.add_argument(
+        "--task-config",
+        type=str,
+        default="configs/tasks/wine.yaml",
+        help="Path to task configuration file",
+    )
     parser.add_argument("--dataset", default="dataset.json")
     parser.add_argument("--rubric", default="rubric.json")
 
@@ -164,8 +174,9 @@ def main():
 
     args = parser.parse_args()
 
-    dataset = load_json(args.dataset)
-    rubric = load_json(args.rubric)
+    task_config = load_yaml(args.task_config)
+    dataset = load_json(task_config["dataset_path"])
+    rubric = load_json(task_config["rubric_path"])
 
     if args.limit:
         dataset = dataset[: args.limit]
