@@ -135,7 +135,12 @@ def write_csv(path: str, rows: List[Dict[str, Any]]) -> None:
         writer.writeheader()
         writer.writerows(rows)
 
-def build_run_metadata(args: argparse.Namespace) -> Dict[str, Any]:
+def build_run_metadata(
+    args: argparse.Namespace,
+    task_config_path: str,
+    system_config_path: str,
+    judge_config_path: str,
+) -> Dict[str, Any]:
     judge_enabled = args.mode == "openai" and args.enable_judge
     return {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -148,6 +153,9 @@ def build_run_metadata(args: argparse.Namespace) -> Dict[str, Any]:
         "judge_prompt_version": JUDGE_PROMPT_VERSION if judge_enabled else None,
         "rubric_version": RUBRIC_VERSION,
         "dataset_version": DATASET_VERSION,
+        "task_config_path": task_config_path,
+        "system_config_path": system_config_path,
+        "judge_config_path": judge_config_path,
     }
 
 
@@ -236,20 +244,20 @@ def main():
         "--task-config",
         type=str,
         default="configs/tasks/wine.yaml",
-        help="Path to task configuration file",
+        help="Path to task configuration file for the evaluation task",
     )
     parser.add_argument(
         "--system-config",
         type=str,
         default=None,
-        help="Optional override path to system configuration file",
+        help="Optional override path to system-under-test configuration file",
     )
 
     parser.add_argument(
         "--judge-config",
         type=str,
         default=None,
-        help="Optional override path to judge configuration file",
+        help="Optional override path to judge ensemble configuration file",
     )
     parser.add_argument("--dataset", default="dataset.json")
     parser.add_argument("--rubric", default="rubric.json")
@@ -295,7 +303,9 @@ def main():
     ensure_dir("results")
     ensure_dir("baselines")
 
-    run_metadata = build_run_metadata(args)
+    run_metadata = build_run_metadata(args, task_config_path=args.task_config,
+        system_config_path=system_config_path,
+        judge_config_path=judge_config_path,)
 
     results: List[Dict[str, Any]] = []
 
