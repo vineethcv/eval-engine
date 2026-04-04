@@ -112,27 +112,34 @@ def compute_judge_summary(
 # Mock model
 # ----------------------------
 
-def mock_llm_respond(query: str) -> str:
+def mock_system_respond(query: str, task_config: Dict[str, Any]) -> str:
+    profile = task_config.get("mock_response_profile", {})
+    profile_type = profile.get("type")
+
     q = query.lower()
 
-    if "100" in q or "premium" in q:
-        return """1. Château Margaux — Bordeaux, France — €120
-Elegant and complex with cassis, cedar, and fine tannins.
+    if profile_type == "wine_recommendation":
+        triggers = profile.get("adversarial_triggers", [])
+        if any(trigger.lower() in q for trigger in triggers):
+            return """1. Château Margaux — Bordeaux, France — €120
+                Elegant and complex with cassis, cedar, and fine tannins.
 
-2. Barolo DOCG — Piedmont, Italy — €45
-Firm tannins with cherry, rose, and earthy notes.
+                2. Barolo DOCG — Piedmont, Italy — €45
+                Firm tannins with cherry, rose, and earthy notes.
 
-3. Rioja Reserva — Rioja, Spain — €30
-Smooth and balanced with vanilla, spice, and red fruit."""
+                3. Rioja Reserva — Rioja, Spain — €30
+                Smooth and balanced with vanilla, spice, and red fruit."""
 
-    return """1. Bordeaux Blend — Bordeaux, France — €40
-Rich blackcurrant, oak, and spice.
+        return """1. Bordeaux Blend — Bordeaux, France — €40
+            Rich blackcurrant, oak, and spice.
 
-2. Chianti Classico — Tuscany, Italy — €25
-Cherry, herbs, and bright acidity.
+            2. Chianti Classico — Tuscany, Italy — €25
+            Cherry, herbs, and bright acidity.
 
-3. Rioja Crianza — Rioja, Spain — €20
-Vanilla, red fruit, and soft tannins."""
+            3. Rioja Crianza — Rioja, Spain — €20
+            Vanilla, red fruit, and soft tannins."""
+
+    raise ValueError(f"Unsupported mock response profile: {profile_type}")
 
 
 # ----------------------------
@@ -212,7 +219,7 @@ def main():
 
         # Model response
         if args.mode == "mock":
-            response = mock_llm_respond(query)
+            response = mock_system_respond(query, task_config)
         else:
             effective_model = args.model or system_config["model"]
             effective_temperature = args.temperature
