@@ -293,14 +293,21 @@ The comparator supports both:
 
 ---
 
-## Current limitations
+## Current reference example
 
-•	still centered on one reference task
-•	scorer remains task-specific
-•	generation prompt is still wine-specific
-•	judge output schema is still tied to current rubric dimensions
-•	task genericity is in progress
+The current example task is:
 
+**Wine recommendation evaluation**
+
+This remains the reference task because it demonstrates:
+- hard constraints
+- qualitative scoring
+- useful judge disagreement
+- adversarial cases
+- regression comparison
+
+Wine is the example task, not the long-term framework identity.
+See also: `docs/examples/wine_recommendation.md`
 ---
 
 ## Roadmap direction
