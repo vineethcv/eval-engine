@@ -3,6 +3,12 @@ from __future__ import annotations
 import os
 
 from openai import OpenAI
+from typing import Protocol
+
+
+class SystemClient(Protocol):
+    def generate(self, query: str) -> str:
+        ...
 
 SYSTEM_PROMPT_VERSION = "v1.0-wine-recommendation"
 
@@ -31,30 +37,30 @@ def generate_openai_response(
     """
 
     system_prompt = """
-You are a helpful wine recommendation assistant.
+    You are a helpful wine recommendation assistant.
 
-STRICT RULES:
-- Recommend EXACTLY 3 wines
-- ALL wines must be RED wines
-- ALL wines must be UNDER 50 euros
-- Each recommendation must include:
-  - Wine name
-  - Region and country
-  - Approximate price in euros
-  - Short tasting note
+    STRICT RULES:
+    - Recommend EXACTLY 3 wines
+    - ALL wines must be RED wines
+    - ALL wines must be UNDER 50 euros
+    - Each recommendation must include:
+    - Wine name
+    - Region and country
+    - Approximate price in euros
+    - Short tasting note
 
-FORMAT:
-1. Wine Name — Region, Country — €Price
-Tasting note.
+    FORMAT:
+    1. Wine Name — Region, Country — €Price
+    Tasting note.
 
-2. Wine Name — Region, Country — €Price
-Tasting note.
+    2. Wine Name — Region, Country — €Price
+    Tasting note.
 
-3. Wine Name — Region, Country — €Price
-Tasting note.
+    3. Wine Name — Region, Country — €Price
+    Tasting note.
 
-Do not include anything else.
-"""
+    Do not include anything else.
+    """
 
     client = _get_openai_client()
 
@@ -79,3 +85,15 @@ Do not include anything else.
         raise SystemClientError("OpenAI returned empty response.")
 
     return content
+
+class OpenAISystemClient:
+    def __init__(self, model: str, temperature: float):
+        self.model = model
+        self.temperature = temperature
+
+    def generate(self, query: str) -> str:
+        return generate_openai_response(
+            query=query,
+            model=self.model,
+            temperature=self.temperature,
+        )

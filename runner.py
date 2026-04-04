@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from confidence import compute_confidence
-from system_client import generate_openai_response, SYSTEM_PROMPT_VERSION
+from system_client import OpenAISystemClient, SYSTEM_PROMPT_VERSION
 from judge_client import judge_response_ensemble, JUDGE_PROMPT_VERSION
 from scorer import evaluate_case, evalresult_to_flat_dict
 
@@ -246,12 +246,11 @@ def main():
 
             if effective_temperature is None:
                 effective_temperature = system_config.get("temperature", 0.0)
-
-            response = generate_openai_response(
-                query=query,
+            system_client = OpenAISystemClient(
                 model=effective_model,
                 temperature=effective_temperature,
-            )
+)
+            response = system_client.generate(query)
 
         # Heuristic scoring
         eval_result = evaluate_case(query, response, rubric)
