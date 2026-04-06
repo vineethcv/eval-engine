@@ -2,21 +2,97 @@
   {
     "id": "SUP_001",
     "category": "support_policy",
-    "query": "Can I return hiking shoes if I wore them outside once?"
+    "query": "Can I return hiking shoes if I wore them outside once?",
+    "context_refs": ["policy_returns_worn_items"],
+    "expected_tools": [],
+    "expected_schema": "support_answer"
   },
   {
     "id": "SUP_002",
     "category": "order_support",
-    "query": "Where is my order ORD-1002?"
+    "query": "Where is my order ORD-1002?",
+    "context_refs": [],
+    "expected_tools": ["lookup_order"],
+    "expected_schema": "support_answer"
   },
   {
     "id": "SUP_003",
     "category": "recommendation",
-    "query": "Recommend 3 waterproof jackets under 150 euros for hiking."
+    "query": "Recommend 3 waterproof jackets under 150 euros for hiking.",
+    "context_refs": [],
+    "expected_tools": ["search_catalog"],
+    "expected_schema": "recommendation_answer"
   },
   {
     "id": "SUP_004",
     "category": "agent_workflow",
-    "query": "Cancel my order ORD-1005 if it has not shipped yet."
+    "query": "Cancel my order ORD-1005 if it has not shipped yet.",
+    "context_refs": [],
+    "expected_tools": ["lookup_order", "cancel_order"],
+    "expected_schema": "action_result"
+  },
+  {
+    "id": "SUP_005",
+    "category": "support_policy",
+    "query": "How long do refunds usually take after you receive the returned item?",
+    "context_refs": ["policy_refunds"],
+    "expected_tools": [],
+    "expected_schema": "support_answer"
+  },
+  {
+    "id": "SUP_006",
+    "category": "order_support",
+    "query": "My order ORD-1008 has been processing for several days. What should I do?",
+    "context_refs": ["policy_shipping_delay"],
+    "expected_tools": ["lookup_order"],
+    "expected_schema": "support_answer"
+  },
+  {
+    "id": "SUP_007",
+    "category": "recommendation",
+    "query": "Recommend a jacket for rainy weather in Denmark with a budget of 100 euros.",
+    "context_refs": [],
+    "expected_tools": ["search_catalog"],
+    "expected_schema": "recommendation_answer"
+  },
+  {
+    "id": "SUP_008",
+    "category": "agent_workflow",
+    "query": "Cancel order ORD-1002 for me.",
+    "context_refs": [],
+    "expected_tools": ["lookup_order", "cancel_order"],
+    "expected_schema": "action_result"
+  },
+  {
+    "id": "SUP_009",
+    "category": "retrieval_grounded",
+    "query": "What warranty do you offer on the TrekLite Stove?",
+    "context_refs": ["policy_warranty"],
+    "expected_tools": [],
+    "expected_schema": "support_answer"
+  },
+  {
+    "id": "SUP_010",
+    "category": "recommendation",
+    "query": "Which tent would you suggest for 2 people in windy weather?",
+    "context_refs": [],
+    "expected_tools": ["search_catalog"],
+    "expected_schema": "recommendation_answer"
+  },
+  {
+    "id": "SUP_011",
+    "category": "order_support",
+    "query": "Can order ORD-1011 still be cancelled?",
+    "context_refs": ["policy_cancellation"],
+    "expected_tools": ["lookup_order"],
+    "expected_schema": "support_answer"
+  },
+  {
+    "id": "SUP_012",
+    "category": "support_policy",
+    "query": "I used the shoes outside and now I want a refund. Is that allowed if they are not faulty?",
+    "context_refs": ["policy_returns_worn_items"],
+    "expected_tools": [],
+    "expected_schema": "support_answer"
   }
 ]
