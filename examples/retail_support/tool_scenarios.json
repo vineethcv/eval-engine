@@ -1,12 +1,46 @@
 {
   "lookup_order": {
     "ORD-1002": {
+      "order_id": "ORD-1002",
       "status": "processing",
-      "can_cancel": true
+      "can_cancel": true,
+      "days_in_status": 2
     },
     "ORD-1005": {
+      "order_id": "ORD-1005",
       "status": "shipped",
-      "can_cancel": false
+      "can_cancel": false,
+      "days_in_status": 1
+    },
+    "ORD-1008": {
+      "order_id": "ORD-1008",
+      "status": "processing",
+      "can_cancel": true,
+      "days_in_status": 5
+    },
+    "ORD-1011": {
+      "order_id": "ORD-1011",
+      "status": "delivered",
+      "can_cancel": false,
+      "days_in_status": 0
+    }
+  },
+  "cancel_order": {
+    "ORD-1002": {
+      "success": true,
+      "message": "Order cancelled successfully."
+    },
+    "ORD-1005": {
+      "success": false,
+      "message": "Order cannot be cancelled after shipment."
+    },
+    "ORD-1008": {
+      "success": true,
+      "message": "Order cancelled successfully."
+    },
+    "ORD-1011": {
+      "success": false,
+      "message": "Delivered orders cannot be cancelled."
     }
   }
 }
