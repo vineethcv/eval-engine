@@ -1,8 +1,34 @@
 {
   "SUP_001": {
-    "must_include_any": ["not eligible", "used outdoors"]
+    "must_include_any": ["not eligible", "used outdoors"],
+    "must_not_include": ["full refund guaranteed"],
+    "required_context_ids": ["policy_returns_worn_items"]
+  },
+  "SUP_002": {
+    "required_tools": ["lookup_order"]
   },
   "SUP_004": {
+    "required_tools": ["lookup_order", "cancel_order"],
     "expected_action_success": false
+  },
+  "SUP_005": {
+    "must_include_any": ["5 to 7 business days"],
+    "required_context_ids": ["policy_refunds"]
+  },
+  "SUP_006": {
+    "must_include_any": ["contact support", "manual check"],
+    "required_context_ids": ["policy_shipping_delay"]
+  },
+  "SUP_008": {
+    "required_tools": ["lookup_order", "cancel_order"],
+    "expected_action_success": true
+  },
+  "SUP_009": {
+    "must_include_any": ["2-year", "warranty"],
+    "required_context_ids": ["policy_warranty"]
+  },
+  "SUP_011": {
+    "must_include_any": ["cannot be cancelled"],
+    "required_context_ids": ["policy_cancellation"]
   }
 }

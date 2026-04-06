@@ -12,3 +12,4 @@ tool_scenarios_path: examples/retail_support/tool_scenarios.json
 output_schema_mode: disabled
 tool_simulation_mode: disabled
 judge_mode: disabled
+expected_outputs_path: examples/retail_support/expected_outputs.json
