@@ -6,6 +6,7 @@ import json
 import os
 from datetime import datetime, timezone
 from typing import Any, Dict, List
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -31,14 +32,12 @@ DATASET_VERSION = "v1.0"
 def ensure_dir(path: str) -> None:
     os.makedirs(path, exist_ok=True)
 
-
 def get_task_thresholds(task_config: Dict[str, Any], rubric: Dict[str, Any]) -> Dict[str, Any]:
     evaluation_cfg = task_config.get("evaluation", {})
     thresholds_cfg = evaluation_cfg.get("thresholds", {})
     if thresholds_cfg.get("source") != "rubric":
         raise ValueError("Unsupported thresholds source in task config.")
     return rubric["thresholds"]
-
 
 def get_task_judge_ensemble_config(
     task_config: Dict[str, Any], judge_config: Dict[str, Any]
@@ -49,12 +48,30 @@ def get_task_judge_ensemble_config(
         raise ValueError("Unsupported judge ensemble source in task config.")
     return judge_config
 
+def get_task_slug(task_config: Dict[str, Any], task_config_path: str) -> str:
+    return (
+        task_config.get("name")
+        or task_config.get("task_name")
+        or Path(task_config_path).stem
+    )
+
+def get_task_output_paths(task_slug: str) -> Dict[str, str]:
+    results_dir = f"results/{task_slug}"
+    baselines_dir = f"baselines/{task_slug}"
+
+    return {
+        "results_dir": results_dir,
+        "baselines_dir": baselines_dir,
+        "latest_path": f"{results_dir}/latest_results.json",
+        "run_path_prefix": f"{results_dir}/run_",
+        "csv_path": f"{results_dir}/report.csv",
+        "baseline_path": f"{baselines_dir}/baseline_results.json",
+    }
 
 def validate_mock_mode_support(system_config: Dict[str, Any]) -> None:
     mock_support = system_config.get("mock_support", {})
     if not mock_support.get("enabled", False):
         raise ValueError("Selected system config does not support mock mode.")
-
 
 def build_result_record(
     eval_case: Dict[str, Any],
@@ -105,11 +122,9 @@ def build_result_record(
 
     return record
 
-
 def write_json(path: str, data: Any) -> None:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
-
 
 def write_csv(path: str, rows: List[Dict[str, Any]]) -> None:
     if not rows:
@@ -120,7 +135,6 @@ def write_csv(path: str, rows: List[Dict[str, Any]]) -> None:
         writer = csv.DictWriter(f, fieldnames=keys)
         writer.writeheader()
         writer.writerows(rows)
-
 
 def build_run_metadata(
     args: argparse.Namespace,
@@ -144,8 +158,8 @@ def build_run_metadata(
         "task_config_path": task_config_path,
         "system_config_path": system_config_path,
         "judge_config_path": judge_config_path,
+        "task_config_path": task_config_path,
     }
-
 
 def compute_judge_summary(
     judge_bundle: Dict[str, Any],
@@ -183,7 +197,6 @@ def compute_judge_summary(
         "judge_delta": judge_delta,
         "judge_agreement_level": agreement,
     }
-
 
 # ----------------------------
 # Mock model
@@ -282,7 +295,6 @@ Budget-friendly, but not fully waterproof."""
 
     raise ValueError(f"Unsupported mock response profile: {profile_type}")
 
-
 # ----------------------------
 # Main
 # ----------------------------
@@ -330,6 +342,8 @@ def main():
     task_config = task_bundle["task_config"]
     dataset = task_bundle["dataset"]
     rubric = task_bundle["rubric"]
+    task_slug = get_task_slug(task_config, args.task_config)
+    paths = get_task_output_paths(task_slug)
 
     system_config_path = args.system_config or task_config["system_config"]
     judge_config_path = args.judge_config or task_config["judge_config"]
@@ -345,8 +359,8 @@ def main():
     if args.limit:
         dataset = dataset[: args.limit]
 
-    ensure_dir("results")
-    ensure_dir("baselines")
+    ensure_dir(paths["results_dir"])
+    ensure_dir(paths["baselines_dir"])
 
     run_metadata = build_run_metadata(
         args,
@@ -355,6 +369,7 @@ def main():
         judge_config_path=judge_config_path,
     )
 
+    run_metadata["task_name"] = task_slug
     results: List[Dict[str, Any]] = []
     system_client = None
 
@@ -411,14 +426,14 @@ def main():
         results.append(result_record)
 
     # Write outputs
-    latest_path = "results/latest_results.json"
+    latest_path = paths["latest_path"]
     write_json(latest_path, {"metadata": run_metadata, "results": results})
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_path = f"results/run_{timestamp}.json"
+    run_path = f'{paths["run_path_prefix"]}{timestamp}.json'
     write_json(run_path, {"metadata": run_metadata, "results": results})
 
-    csv_path = "results/report.csv"
+    csv_path = paths["csv_path"]
     write_csv(csv_path, results)
 
     print("\nSaved results:")
@@ -428,13 +443,12 @@ def main():
 
     # Baseline
     if args.write_baseline:
-        baseline_path = "baselines/baseline_results.json"
+        baseline_path = paths["baseline_path"]
         write_json(
             baseline_path,
             {"metadata": run_metadata, "results": results},
         )
         print(f"\nBaseline written to {baseline_path}")
-
 
 if __name__ == "__main__":
     main()
