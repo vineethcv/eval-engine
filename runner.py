@@ -213,6 +213,73 @@ Cherry, herbs, and bright acidity.
 3. Rioja Crianza — Rioja, Spain — €20
 Vanilla, red fruit, and soft tannins."""
 
+    if profile_type == "retail_support":
+        if "wore them outside" in q or "used the shoes outside" in q:
+            return (
+                "The shoes are not eligible for return if they were used outdoors, "
+                "unless they are faulty."
+            )
+
+        if "where is my order ord-1002" in q:
+            return (
+                "Order ORD-1002 is currently in processing status. "
+                "It has not shipped yet."
+            )
+
+        if "recommend 3 waterproof jackets under 150 euros" in q:
+            return """1. NorthTrail RainShell — €129
+Lightweight waterproof shell for hiking in wet weather.
+
+2. NordLite PackShell — €99
+Packable waterproof jacket suitable for rain and light hiking.
+
+3. Harbor Softshell — €89
+Comfortable everyday jacket, but it is not fully waterproof."""
+
+        if "cancel my order ord-1005" in q:
+            return (
+                "Order ORD-1005 cannot be cancelled because it has already shipped."
+            )
+
+        if "refunds usually take" in q:
+            return (
+                "Approved refunds are usually processed within 5 to 7 business days "
+                "after the returned item is received and inspected."
+            )
+
+        if "order ord-1008 has been processing" in q:
+            return (
+                "Order ORD-1008 is still processing. Since it has been in processing "
+                "for several days, you should contact support for a manual check."
+            )
+
+        if "budget of 100 euros" in q:
+            return """1. NordLite PackShell — €99
+A waterproof and packable option that fits the budget.
+
+2. Harbor Softshell — €89
+Budget-friendly, but not fully waterproof."""
+
+        if "cancel order ord-1002" in q:
+            return "Order ORD-1002 has been cancelled successfully."
+
+        if "warranty do you offer on the treklite stove" in q:
+            return (
+                "The TrekLite Stove includes a 2-year limited warranty covering "
+                "manufacturing defects."
+            )
+
+        if "tent would you suggest for 2 people in windy weather" in q:
+            return (
+                "I suggest the WindRidge 2. It is a two-person tent designed for "
+                "windy conditions."
+            )
+
+        if "can order ord-1011 still be cancelled" in q:
+            return "Order ORD-1011 cannot be cancelled because it has already been delivered."
+
+        return "I’m sorry, but I could not determine the correct retail support response."
+
     raise ValueError(f"Unsupported mock response profile: {profile_type}")
 
 
