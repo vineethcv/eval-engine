@@ -1,0 +1,12 @@
+{
+  "lookup_order": {
+    "ORD-1002": {
+      "status": "processing",
+      "can_cancel": true
+    },
+    "ORD-1005": {
+      "status": "shipped",
+      "can_cancel": false
+    }
+  }
+}

@@ -1,0 +1,14 @@
+task_name: retail_support
+task_type: mixed
+
+dataset_path: examples/retail_support/dataset.json
+rubric_path: examples/retail_support/rubric.json
+
+knowledge_base_path: examples/retail_support/knowledge_base.json
+catalog_path: examples/retail_support/catalog.json
+orders_path: examples/retail_support/orders.json
+tool_scenarios_path: examples/retail_support/tool_scenarios.json
+
+output_schema_mode: disabled
+tool_simulation_mode: disabled
+judge_mode: disabled

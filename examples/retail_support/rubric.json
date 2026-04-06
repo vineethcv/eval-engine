@@ -1,0 +1,16 @@
+{
+  "version": "v1.0",
+  "weights": {
+    "instruction_match": 0.25,
+    "grounding_accuracy": 0.25,
+    "tool_use_correctness": 0.25,
+    "resolution_helpfulness": 0.15,
+    "tone_clarity": 0.10
+  },
+  "critical_gates": [
+    "no_policy_hallucination",
+    "no_false_action_claim",
+    "respect_constraints",
+    "valid_output_schema"
+  ]
+}

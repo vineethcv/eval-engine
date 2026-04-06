@@ -1,0 +1,14 @@
+[
+  {
+    "sku": "JKT_001",
+    "name": "NorthTrail RainShell",
+    "price_eur": 129,
+    "waterproof": true
+  },
+  {
+    "sku": "JKT_002",
+    "name": "Fjord Trek Pro",
+    "price_eur": 179,
+    "waterproof": true
+  }
+]

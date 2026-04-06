@@ -1,0 +1,8 @@
+{
+  "SUP_001": {
+    "must_include_any": ["not eligible", "used outdoors"]
+  },
+  "SUP_004": {
+    "expected_action_success": false
+  }
+}

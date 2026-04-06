@@ -1,0 +1,10 @@
+[
+  {
+    "id": "policy_returns_worn_items",
+    "text": "Footwear used outdoors is not eligible for return unless faulty."
+  },
+  {
+    "id": "policy_cancellation",
+    "text": "Orders can be cancelled only before shipment."
+  }
+]

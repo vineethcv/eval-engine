@@ -1,0 +1,22 @@
+[
+  {
+    "id": "SUP_001",
+    "category": "support_policy",
+    "query": "Can I return hiking shoes if I wore them outside once?"
+  },
+  {
+    "id": "SUP_002",
+    "category": "order_support",
+    "query": "Where is my order ORD-1002?"
+  },
+  {
+    "id": "SUP_003",
+    "category": "recommendation",
+    "query": "Recommend 3 waterproof jackets under 150 euros for hiking."
+  },
+  {
+    "id": "SUP_004",
+    "category": "agent_workflow",
+    "query": "Cancel my order ORD-1005 if it has not shipped yet."
+  }
+]

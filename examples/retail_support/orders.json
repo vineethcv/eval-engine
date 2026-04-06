@@ -1,0 +1,12 @@
+[
+  {
+    "order_id": "ORD-1002",
+    "status": "processing",
+    "can_cancel": true
+  },
+  {
+    "order_id": "ORD-1005",
+    "status": "shipped",
+    "can_cancel": false
+  }
+]
