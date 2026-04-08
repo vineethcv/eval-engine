@@ -1,0 +1,30 @@
+task_name: retail_support
+task_type: mixed
+description: "Retail support evaluation task covering recommendation support retrieval and simple workflow cases"
+
+dataset_path: examples/retail_support/dataset.json
+rubric_path: examples/retail_support/rubric.json
+
+knowledge_base_path: examples/retail_support/knowledge_base.json
+catalog_path: examples/retail_support/catalog.json
+orders_path: examples/retail_support/orders.json
+tool_scenarios_path: examples/retail_support/tool_scenarios.json
+expected_outputs_path: examples/retail_support/expected_outputs.json
+
+system_config: configs/systems/openai_wine.yaml
+judge_config: configs/judges/default_ensemble.yaml
+
+mock_response_profile:
+  type: retail_support
+
+evaluation:
+  rubric:
+    source: task_local
+  thresholds:
+    source: rubric
+  judge_ensemble:
+    source: task_judge_config
+
+output_schema_mode: disabled
+tool_simulation_mode: disabled
+judge_mode: disabled

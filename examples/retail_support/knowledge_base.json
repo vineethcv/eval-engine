@@ -1,0 +1,27 @@
+[
+  {
+    "id": "policy_returns_worn_items",
+    "title": "Returns for worn footwear",
+    "text": "Footwear used outdoors is not eligible for return unless the item is faulty."
+  },
+  {
+    "id": "policy_cancellation",
+    "title": "Order cancellation policy",
+    "text": "Orders can be cancelled only before the shipment status changes to shipped."
+  },
+  {
+    "id": "policy_refunds",
+    "title": "Refund processing policy",
+    "text": "Approved refunds are processed within 5 to 7 business days after the returned item is received and inspected."
+  },
+  {
+    "id": "policy_shipping_delay",
+    "title": "Shipping delay guidance",
+    "text": "If an order remains in processing for more than 3 business days, the customer should be advised to contact support for a manual check."
+  },
+  {
+    "id": "policy_warranty",
+    "title": "Warranty policy",
+    "text": "Outdoor stoves and technical gear include a 2-year limited warranty covering manufacturing defects only."
+  }
+]

@@ -1,0 +1,56 @@
+[
+  {
+    "sku": "JKT_001",
+    "name": "NorthTrail RainShell",
+    "category": "jacket",
+    "price_eur": 129,
+    "waterproof": true,
+    "use_case": ["hiking", "commute", "rain"],
+    "notes": "Lightweight waterproof shell suited for wet and windy conditions."
+  },
+  {
+    "sku": "JKT_002",
+    "name": "Fjord Trek Pro",
+    "category": "jacket",
+    "price_eur": 179,
+    "waterproof": true,
+    "use_case": ["hiking", "mountain"],
+    "notes": "Durable trekking shell with stronger weather protection but above tighter budget ranges."
+  },
+  {
+    "sku": "JKT_003",
+    "name": "NordLite PackShell",
+    "category": "jacket",
+    "price_eur": 99,
+    "waterproof": true,
+    "use_case": ["hiking", "travel"],
+    "notes": "Packable waterproof jacket for occasional hikes and everyday use."
+  },
+  {
+    "sku": "JKT_004",
+    "name": "Harbor Softshell",
+    "category": "jacket",
+    "price_eur": 89,
+    "waterproof": false,
+    "use_case": ["commute", "casual"],
+    "notes": "Comfortable softshell with light weather resistance, not fully waterproof."
+  },
+  {
+    "sku": "TENT_001",
+    "name": "WindRidge 2",
+    "category": "tent",
+    "price_eur": 210,
+    "waterproof": true,
+    "use_case": ["camping", "windy_weather", "2_person"],
+    "notes": "Two-person tent with strong pole structure for windy conditions."
+  },
+  {
+    "sku": "STOVE_001",
+    "name": "TrekLite Stove",
+    "category": "stove",
+    "price_eur": 59,
+    "waterproof": false,
+    "use_case": ["camping", "cooking"],
+    "notes": "Compact backpacking stove with 2-year limited warranty."
+  }
+]

@@ -1,0 +1,30 @@
+[
+  {
+    "order_id": "ORD-1002",
+    "status": "processing",
+    "items": ["JKT_001"],
+    "can_cancel": true,
+    "days_in_status": 2
+  },
+  {
+    "order_id": "ORD-1005",
+    "status": "shipped",
+    "items": ["JKT_003"],
+    "can_cancel": false,
+    "days_in_status": 1
+  },
+  {
+    "order_id": "ORD-1008",
+    "status": "processing",
+    "items": ["STOVE_001"],
+    "can_cancel": true,
+    "days_in_status": 5
+  },
+  {
+    "order_id": "ORD-1011",
+    "status": "delivered",
+    "items": ["TENT_001"],
+    "can_cancel": false,
+    "days_in_status": 0
+  }
+]
